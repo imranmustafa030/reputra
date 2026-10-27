@@ -1,39 +1,64 @@
-import { Suspense } from "react";
 import type { Metadata } from "next";
-import { Brand } from "@/components/brand";
+import { cache, Suspense } from "react";
+import { ExternalLink, LogOut } from "lucide-react";
+import { AppShell, type ShellData } from "@/components/app-shell";
 import { requireOwner } from "@/lib/auth";
-import { DashboardNav } from "./nav";
+import { countUnreadNotes } from "@/lib/stats";
+import { PLAN_NAMES } from "@/lib/labels";
+import { ScopeCard } from "@/components/scope-card";
 
 export const metadata: Metadata = { title: { default: "Dashboard", template: "%s · Reputra" }, robots: { index: false } };
 
-// The shell is static and prerenders instantly; only the business name and each page's data wait for the session.
 export default function DashboardLayout({ children }: LayoutProps<"/dashboard">) {
   return (
-    <div className="min-h-dvh md:grid md:grid-cols-[248px_minmax(0,1fr)]">
-      <aside className="bg-ink px-5 pt-5 pb-3 text-paper md:sticky md:top-0 md:flex md:h-dvh md:flex-col md:px-4 md:py-6">
-        <div className="flex items-center justify-between md:block md:px-2">
-          <Brand href="/dashboard" />
-          <div className="mt-0 text-sm text-paper/60 md:mt-5">
-            <Suspense fallback={<span className="inline-block h-4 w-28 animate-pulse rounded bg-paper/10" />}>
-              <BusinessName />
-            </Suspense>
-          </div>
-        </div>
-        <div className="mt-4 md:mt-8">
-          <DashboardNav />
-        </div>
-        <form action="/logout" method="post" className="hidden md:mt-auto md:block md:px-2">
-          <button type="submit" className="text-sm text-paper/60 transition-colors hover:text-paper">
-            Log out
-          </button>
-        </form>
-      </aside>
-      <main className="mx-auto w-full max-w-[1040px] px-5 py-8 md:px-10 md:py-12">{children}</main>
-    </div>
+    <AppShell side="owner" load={shellData}>
+      <Suspense>
+        <DemoNotice />
+      </Suspense>
+      {children}
+    </AppShell>
   );
 }
 
-async function BusinessName() {
+// Sample accounts say so on every screen, so nobody mistakes their numbers for real results.
+async function DemoNotice() {
   const { business } = await requireOwner();
-  return <span className="block max-w-[16ch] truncate md:max-w-none">{business.name}</span>;
+  if (!business.demo) return null;
+  return <p className="mb-5 rounded-xl border border-edge bg-frame px-4 py-3 text-sm text-muted">Sample data: this is a demo account, and every number on it is made up.</p>;
 }
+
+const shellData = cache(async (): Promise<ShellData> => {
+  const { user, business, access } = await requireOwner();
+  const notes = access.state === "none" ? 0 : await countUnreadNotes(business.id);
+  return {
+    scope: <ScopeCard name={business.name} meta={`${access.plan ? `${PLAN_NAMES[access.plan]} plan` : "No plan yet"} · ${business.city}`} />,
+    counts: { notes },
+    topBar: (
+      <a
+        href={`/r/${business.slug}`}
+        target="_blank"
+        rel="noopener"
+        className="inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-sm text-muted transition-colors hover:bg-hover hover:text-ink"
+      >
+        Your review page
+        <ExternalLink aria-hidden="true" className="size-3.5" strokeWidth={1.75} />
+      </a>
+    ),
+    account: (
+      <div className="flex items-center gap-2 border-t border-edge px-1 pt-3">
+        <span aria-hidden="true" className="grid size-8 shrink-0 place-items-center rounded-full bg-active text-xs font-semibold">
+          {user.name.trim().charAt(0).toUpperCase()}
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-sm font-medium">{user.name}</span>
+          <span className="block truncate text-xs text-muted">{user.email}</span>
+        </span>
+        <form action="/logout" method="post">
+          <button type="submit" className="grid size-9 place-items-center rounded-full text-muted hover:bg-hover hover:text-ink" aria-label="Log out" title="Log out">
+            <LogOut aria-hidden="true" className="size-4" strokeWidth={1.75} />
+          </button>
+        </form>
+      </div>
+    ),
+  };
+});

@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-// A fast, optimistic gate: no session cookie, no dashboard. The real check
+// A fast, optimistic gate: no session cookie, no dashboard, checkout or admin. The real check
 // (is the cookie valid, does the user exist) happens next to the data in lib/auth.ts.
 export function proxy(request: NextRequest) {
   if (!request.cookies.has("reputra_session")) {
@@ -11,5 +11,5 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*"],
+  matcher: ["/dashboard/:path*", "/checkout/:path*", "/admin/:path*"],
 };

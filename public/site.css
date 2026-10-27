@@ -184,6 +184,9 @@ h1, h2, h3 { margin: 0; font-weight: inherit; }
 .nav.on-light .nav__pill { background: oklch(14.5% 0.004 265 / 0.07); }
 .nav .btn { min-height: 44px; }
 .nav__end { display: flex; align-items: center; gap: 8px; }
+.nav__login { padding: 9px 12px; border-radius: 999px; font-size: 0.9rem; text-decoration: none; color: inherit; opacity: 0.72; transition: opacity 0.25s; }
+.nav__login:hover { opacity: 1; }
+@media (max-width: 420px) { .nav__login { display: none; } }
 /* the theme switch: sun and moon trade places with a turn; the page itself changes with a ripple from here */
 .theme {
   position: relative; display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%;

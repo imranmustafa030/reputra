@@ -13,6 +13,8 @@ export async function getPublicBusiness(slug: string) {
   cacheLife("hours");
 
   await db();
-  const business = await Business.findOne({ slug: slug.toLowerCase() }).select("name slug googleReviewUrl").lean();
-  return business ? { name: business.name, slug: business.slug, hasGoogleLink: Boolean(business.googleReviewUrl) } : null;
+  const business = await Business.findOne({ slug: slug.toLowerCase() }).select("name slug googleReviewUrl status").lean();
+  // A suspended business's page reads as not found, the same as a missing one.
+  if (!business || business.status === "suspended") return null;
+  return { name: business.name, slug: business.slug, hasGoogleLink: Boolean(business.googleReviewUrl) };
 }

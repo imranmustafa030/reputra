@@ -1,11 +1,13 @@
 import type { Metadata, Viewport } from "next";
-import { Geist } from "next/font/google";
+import { Geist, Geist_Mono } from "next/font/google";
+import { MotionProvider } from "@/components/motion/provider";
 import "./globals.css";
 
-// Layout for the Next.js side of the site (dashboard, login, review pages).
+// Layout for the Next.js side of the site (dashboard, checkout, admin, login, review pages).
 // The marketing website at "/" is public/index.html and does not use it.
 
 const geist = Geist({ variable: "--font-geist", subsets: ["latin"] });
+const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: { default: "Reputra", template: "%s · Reputra" },
@@ -21,8 +23,10 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={geist.variable}>
-      <body className="min-h-dvh bg-paper-2 font-sans text-ink antialiased">{children}</body>
+    <html lang="en" className={`${geist.variable} ${geistMono.variable}`}>
+      <body className="min-h-dvh bg-frame font-sans text-ink antialiased">
+        <MotionProvider>{children}</MotionProvider>
+      </body>
     </html>
   );
 }

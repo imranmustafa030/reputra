@@ -9,7 +9,7 @@ export async function GET(request: Request, { params }: RouteContext<"/r/[slug]/
   const url = new URL(request.url);
 
   await db();
-  const business = await Business.findOne({ slug }).select("_id googleReviewUrl").lean();
+  const business = await Business.findOne({ slug, status: "active" }).select("_id googleReviewUrl").lean();
   if (!business?.googleReviewUrl) return new NextResponse(null, { status: 303, headers: { Location: `/r/${slug}` } });
 
   await Event.create({ business: business._id, type: "google_click", source: toSource(url.searchParams.get("s")) });

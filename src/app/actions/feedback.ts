@@ -24,7 +24,7 @@ export async function sendFeedback(_: FormState, form: FormData): Promise<FormSt
   if (website) return { ok: "Thank you." };
 
   await db();
-  const business = await Business.findOne({ slug }).select("_id").lean();
+  const business = await Business.findOne({ slug, status: "active" }).select("_id").lean();
   if (!business) return { error: "This review page no longer exists." };
 
   const source = toSource(parsed.data.source);

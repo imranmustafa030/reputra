@@ -30,8 +30,30 @@ export function fillMessage(template: string, values: { name: string; business: 
     .trim();
 }
 
-export function formatDate(date: Date | string) {
-  return new Intl.DateTimeFormat("en-PK", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" }).format(
-    new Date(date),
-  );
+// A pasted list of customers, one per line, from Excel, a billing app or WhatsApp:
+// "Ali 0300 1234567", "0300-1234567, Sana", "+92 321 7654321". The number is found
+// wherever it sits; whatever is left is the name. Repeats are dropped.
+export function parseContacts(text: string) {
+  const seen = new Set<string>();
+  const contacts: { name: string; number: string }[] = [];
+  let skipped = 0;
+  for (const line of text.split(/\r?\n/)) {
+    if (!line.trim()) continue;
+    const match = line.match(/(\+?\d[\d\s-]{8,16}\d)/);
+    const number = match ? toWhatsAppNumber(match[1]) : null;
+    if (!number) {
+      skipped++;
+      continue;
+    }
+    if (seen.has(number)) continue;
+    seen.add(number);
+    const name = line
+      .replace(match![1], " ")
+      .replace(/[,;\t|]+/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 40);
+    contacts.push({ name, number });
+  }
+  return { contacts, skipped };
 }

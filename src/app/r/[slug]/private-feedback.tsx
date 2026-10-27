@@ -3,64 +3,122 @@
 import { useActionState, useState } from "react";
 import { sendFeedback } from "@/app/actions/feedback";
 import { SubmitButton } from "@/components/form";
+import type { Copy } from "./copy";
 
 const field =
-  "w-full rounded-xl border border-line-dark bg-paper/5 px-4 py-3 text-base text-paper placeholder:text-paper/35 focus:border-paper/50 focus:outline-none";
+  "w-full rounded-xl border border-(--rv-line) bg-(--rv-field) px-4 py-3 text-base text-(--rv-fg) placeholder:text-(--rv-fg3) transition-colors duration-200 focus:border-(--rv-fg3) focus:bg-(--rv-bg) focus:outline-none";
 
-export function PrivateFeedback({ slug, source }: { slug: string; source: string }) {
+// A note only the owner reads. It opens in place, and a sent note is answered with a drawn check.
+export function PrivateFeedback({
+  slug,
+  source,
+  copy: t,
+  active,
+  onOpen,
+}: {
+  slug: string;
+  source: string;
+  copy: Copy;
+  active: boolean;
+  onOpen: () => void;
+}) {
   const [open, setOpen] = useState(false);
   const [state, action] = useActionState(sendFeedback, undefined);
 
   if (state?.ok) {
     return (
-      <p role="status" className="mt-6 rounded-2xl border border-line-dark p-5 leading-relaxed text-paper/80">
-        {state.ok}
-      </p>
-    );
-  }
-
-  if (!open) {
-    return (
-      <button type="button" onClick={() => setOpen(true)} className="btn btn-ghost mt-3 min-h-14 w-full border-line-dark text-[1.05rem]">
-        Tell the owner privately
-      </button>
+      <div role="status" className="rv-sent mt-6 flex items-start gap-4 rounded-2xl border border-(--rv-line) p-5">
+        <svg viewBox="0 0 40 40" className="size-10 shrink-0" aria-hidden="true">
+          <circle cx="20" cy="20" r="18" className="rv-check-ring" />
+          <path d="M12.5 20.5l5 5 10-11" className="rv-check-tick" />
+        </svg>
+        <div>
+          <p className="font-medium">{t.sent}</p>
+          <p className="mt-1 text-sm leading-relaxed text-(--rv-fg2)">{t.sentNote}</p>
+        </div>
+      </div>
     );
   }
 
   return (
-    <form action={action} className="mt-8 grid gap-4 border-t border-line-dark pt-8">
-      <input type="hidden" name="slug" value={slug} />
-      <input type="hidden" name="source" value={source} />
-      <input type="text" name="website" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden="true" />
-      <div>
-        <label htmlFor="message" className="mb-2 block text-sm text-paper/70">
-          What should the owner know?
-        </label>
-        <textarea id="message" name="message" rows={4} required minLength={3} maxLength={2000} defaultValue={state?.values?.message} className={field} autoFocus />
-      </div>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div>
-          <label htmlFor="fb-name" className="mb-2 block text-sm text-paper/70">
-            Your name <span className="text-paper/40">(optional)</span>
-          </label>
-          <input id="fb-name" name="name" autoComplete="name" maxLength={80} defaultValue={state?.values?.name} className={field} />
-        </div>
-        <div>
-          <label htmlFor="fb-phone" className="mb-2 block text-sm text-paper/70">
-            Phone, for a reply <span className="text-paper/40">(optional)</span>
-          </label>
-          <input id="fb-phone" name="phone" inputMode="tel" autoComplete="tel" maxLength={30} defaultValue={state?.values?.phone} className={field} />
-        </div>
-      </div>
-      {state?.error && (
-        <p aria-live="polite" className="text-sm text-[oklch(75%_0.15_27)]">
-          {state.error}
-        </p>
+    <>
+      {!open && (
+        <button
+          type="button"
+          tabIndex={active ? 0 : -1}
+          onClick={() => {
+            onOpen();
+            setOpen(true);
+          }}
+          className="btn btn-ghost mt-4 min-h-14 w-full border-(--rv-line) text-[1.05rem]"
+        >
+          {t.private}
+        </button>
       )}
-      <SubmitButton pending="Sending…" className="btn mt-1 min-h-14 w-full bg-paper text-ink">
-        Send to the owner
-      </SubmitButton>
-      <p className="text-center text-xs text-paper/40">Only the owner sees this. It is not posted anywhere.</p>
-    </form>
+      <div className={`rv-reveal ${open ? "is-open" : ""}`}>
+        <div className="rv-reveal-inner">
+          {open && (
+            <form action={action} className="mt-6 grid gap-4 border-t border-(--rv-line) pt-6">
+              <input type="hidden" name="slug" value={slug} />
+              <input type="hidden" name="source" value={source} />
+              <input type="text" name="website" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden="true" />
+              <div>
+                <label htmlFor="message" className="mb-2 block text-sm text-(--rv-fg2)">
+                  {t.form.message}
+                </label>
+                <textarea
+                  id="message"
+                  name="message"
+                  rows={4}
+                  required
+                  minLength={3}
+                  maxLength={2000}
+                  defaultValue={state?.values?.message}
+                  className={field}
+                  autoFocus
+                />
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label htmlFor="fb-name" className="mb-2 block text-sm text-(--rv-fg2)">
+                    {t.form.name} <span className="text-(--rv-fg3)">({t.form.optional})</span>
+                  </label>
+                  <input id="fb-name" name="name" autoComplete="name" maxLength={80} defaultValue={state?.values?.name} className={field} />
+                </div>
+                <div>
+                  <label htmlFor="fb-phone" className="mb-2 block text-sm text-(--rv-fg2)">
+                    {t.form.phone} <span className="text-(--rv-fg3)">({t.form.optional})</span>
+                  </label>
+                  <input
+                    id="fb-phone"
+                    name="phone"
+                    inputMode="tel"
+                    autoComplete="tel"
+                    maxLength={30}
+                    defaultValue={state?.values?.phone}
+                    className={field}
+                    dir="ltr"
+                  />
+                </div>
+              </div>
+              {state?.error && (
+                <p aria-live="polite" className="rv-shake text-sm text-[oklch(75%_0.15_27)]">
+                  {state.error}
+                </p>
+              )}
+              <SubmitButton pending={t.form.sending} className="btn mt-1 min-h-14 w-full bg-(--rv-fg) text-(--rv-bg)">
+                {t.form.send}
+              </SubmitButton>
+              <div className="flex items-center justify-between gap-4">
+                <p className="text-xs text-(--rv-fg3)">{t.form.only}</p>
+                <button type="button" onClick={() => setOpen(false)} className="min-h-11 shrink-0 text-sm text-(--rv-fg3) hover:text-(--rv-fg)">
+                  {t.form.cancel}
+                </button>
+              </div>
+            </form>
+          )}
+        </div>
+      </div>
+    </>
   );
 }

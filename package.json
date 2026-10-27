@@ -6,13 +6,17 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "seed": "tsx --env-file-if-exists=.env.local scripts/seed.ts"
   },
   "dependencies": {
     "@vercel/functions": "^3.10.4",
     "bcryptjs": "^3.0.3",
     "iron-session": "^9.0.1",
+    "lucide-react": "^0.577.0",
     "mongoose": "^9.11.4",
+    "motion": "13.5.1",
     "next": "16.4.3",
     "qrcode": "^1.5.4",
     "react": "19.3.0",
@@ -29,6 +33,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.4.3",
     "tailwindcss": "^4",
+    "tsx": "^4.23.15",
     "typescript": "^5"
   },
   "overrides": {

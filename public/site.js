@@ -71,7 +71,7 @@
 
   /* ---------- WhatsApp links (⚑ D01: the number) ---------- */
   const WA = "923000000000";
-  const FIRST = "Assalam o Alaikum! I'd like to start a free month of Reputra for my clinic.";
+  const FIRST = "Assalam o Alaikum! I'd like to know more about Reputra for my business.";
   document.querySelectorAll("[data-wa]").forEach((a) => {
     a.href = `https://wa.me/${WA}?text=${encodeURIComponent(a.dataset.msg || FIRST)}`;
   });
