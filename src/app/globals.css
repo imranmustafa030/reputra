@@ -1,0 +1,127 @@
+@import "tailwindcss";
+
+/* The app (dashboard, login, review pages) shares the website's palette:
+   near-black ink, near-white paper, one accent the colour of a review star. */
+@theme {
+  --color-ink: oklch(14.5% 0.004 265);
+  --color-ink-2: oklch(19% 0.005 265);
+  --color-ink-3: oklch(32% 0.006 265);
+  --color-paper: oklch(99.4% 0.001 265);
+  --color-paper-2: oklch(97.4% 0.002 265);
+  --color-paper-3: oklch(94.4% 0.003 265);
+  --color-stone: oklch(52% 0.008 265);
+  --color-stone-light: oklch(66% 0.008 265);
+  --color-line: oklch(14.5% 0.004 265 / 0.1);
+  --color-line-dark: oklch(99.4% 0.001 265 / 0.12);
+  --color-amber: oklch(81% 0.165 76);
+  --color-amber-ink: oklch(56% 0.14 62);
+  --color-growth: oklch(52% 0.12 160);
+  --color-danger: oklch(55% 0.2 27);
+  --font-sans: var(--font-geist), "Inter", system-ui, sans-serif;
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    font-feature-settings: "ss01", "cv11";
+    -webkit-font-smoothing: antialiased;
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-amber);
+    outline-offset: 2px;
+  }
+}
+
+@layer components {
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5em;
+    min-height: 44px;
+    padding: 0 20px;
+    border-radius: 999px;
+    border: 1px solid transparent;
+    background: var(--color-ink);
+    color: var(--color-paper);
+    font-weight: 500;
+    font-size: 0.95rem;
+    white-space: nowrap;
+    cursor: pointer;
+    transition:
+      transform 0.2s var(--ease-out-expo),
+      background-color 0.2s,
+      border-color 0.2s,
+      opacity 0.2s;
+  }
+  .btn:hover {
+    transform: translateY(-1px);
+  }
+  .btn:active {
+    transform: scale(0.98);
+  }
+  .btn:disabled {
+    opacity: 0.55;
+    cursor: progress;
+    transform: none;
+  }
+  .btn-gold {
+    background: var(--color-amber);
+    color: var(--color-ink);
+  }
+  .btn-ghost {
+    background: transparent;
+    color: inherit;
+    border-color: var(--color-line);
+  }
+  .btn-ghost:hover {
+    border-color: currentColor;
+  }
+
+  .label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 0.875rem;
+    font-weight: 500;
+  }
+  .input {
+    width: 100%;
+    min-height: 44px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    border: 1px solid var(--color-line);
+    background: var(--color-paper);
+    color: var(--color-ink);
+    font-size: 1rem; /* 16px keeps iOS from zooming into the field */
+    transition:
+      border-color 0.15s,
+      box-shadow 0.15s;
+  }
+  .input:hover {
+    border-color: oklch(14.5% 0.004 265 / 0.22);
+  }
+  .input:focus {
+    outline: none;
+    border-color: var(--color-ink);
+    box-shadow: 0 0 0 3px oklch(81% 0.165 76 / 0.35);
+  }
+  textarea.input {
+    min-height: 120px;
+    resize: vertical;
+    line-height: 1.5;
+  }
+  .hint {
+    margin-top: 6px;
+    font-size: 0.8125rem;
+    color: var(--color-stone);
+  }
+
+  .panel {
+    border-radius: 16px;
+    border: 1px solid var(--color-line);
+    background: var(--color-paper);
+  }
+}

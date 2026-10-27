@@ -1,0 +1,345 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reputra · More Google reviews. More customers.</title>
+<meta name="description" content="An NFC tap card and QR stand for your counter. Customers tap, review you on Google in Urdu or English, and your rating climbs, so more people find you. For restaurants, salons, clinics, gyms and shops. First month free.">
+<meta name="theme-color" content="#0b0c0e">
+<!-- the import map comes before any module load or preload, or the browser ignores it -->
+<script type="importmap">
+{"imports":{
+  "three": "https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.min.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/",
+  "https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.core.js": "https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.core.min.js"
+}}
+</script>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='6' fill='%230b0c0e'/%3E%3Ccircle cx='8.5' cy='12' r='3.2' fill='%23f0ad2e'/%3E%3Cpath d='M14.2 5.4a8.6 8.6 0 0 1 0 13.2' fill='none' stroke='%23f0ad2e' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="preload" href="img/gulberg.svg" as="fetch" crossorigin>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@300..700&family=Noto+Nastaliq+Urdu:wght@500&display=swap">
+<script>try { if (localStorage.getItem("reputra-theme") === "light") document.documentElement.dataset.theme = "light"; } catch (e) {}
+if (window.WebGLRenderingContext) document.documentElement.classList.add("has-card"); /* the stage's 3D layout from the first paint; card3d.js hands back if WebGL fails */</script>
+<link rel="stylesheet" href="site.css">
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.min.js">
+<link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.core.min.js">
+<link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/environments/RoomEnvironment.js">
+<script type="module">
+  // The 3D stage is the heaviest thing on the page. It starts once the camera has landed and the browser is idle,
+  // or the moment the visitor heads for it (a scroll, a key, a link), never during the fly-in.
+  let started;
+  const start = () => (started ??= import("./card3d.js").then(() => window.ScrollTrigger && ScrollTrigger.refresh(), () => {}));
+  window.__card3d = start;
+  for (const type of ["wheel", "touchmove", "keydown", "scroll"]) addEventListener(type, start, { once: true, passive: true });
+  const later = () => (window.requestIdleCallback || setTimeout)(start, { timeout: 1500 });
+  if (window.__landed) later(); else addEventListener("reputra:landed", later, { once: true });
+  setTimeout(start, 8000); // whatever happens, the stage is ready long before anyone reaches it
+</script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="nav" data-nav>
+  <a class="brand" href="#top" aria-label="Reputra, back to top">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="7.5" cy="12" r="3.6"/><path d="M13.93 4.34A10 10 0 0 1 13.93 19.66"/></svg>
+    reputra
+  </a>
+  <nav aria-label="Main" data-navlinks>
+    <span class="nav__pill" aria-hidden="true" data-navpill></span>
+    <a href="#how">How it works</a>
+    <a href="#try">Try it</a>
+    <a href="#pricing">Pricing</a>
+    <a href="#questions">Questions</a>
+  </nav>
+  <div class="nav__end">
+    <button type="button" class="theme" data-theme-toggle aria-label="Switch to light mode" aria-pressed="false">
+      <svg class="theme__sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/></svg>
+      <svg class="theme__moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.2 14.6A8.4 8.4 0 0 1 9.4 3.8a8.4 8.4 0 1 0 10.8 10.8z"/></svg>
+    </button>
+    <a class="btn btn--sm btn--gold" data-wa href="#" target="_blank" rel="noopener" data-dummy="D01">Start free month</a>
+  </div>
+</header>
+
+<main id="main">
+
+  <!-- one world behind the hero and the three-ways stage: the real streets of Gulberg, Lahore
+       (© OpenStreetMap contributors). Scrolling down, the camera moves in to the café. -->
+  <div class="world" data-world aria-hidden="true">
+      <div class="rig" data-rig>
+        <div class="map" data-map>
+          <div class="map__streets" data-streets></div>
+        </div>
+      </div>
+      <div class="world__shade"></div>
+      <div class="world__light"></div>
+      <div class="rig rig--pins" data-rig>
+      <div class="map map--pins" data-map-pins>
+        <i class="pin" style="--x:0.4875;--y:0.4375;--d:0.77s"><b>4.4 ★</b></i>
+        <i class="pin" style="--x:0.425;--y:0.6208;--d:0.89s"><b>4.3 ★</b></i>
+        <i class="pin" style="--x:0.3688;--y:0.3667;--d:1.28s"><b>4.5 ★</b></i>
+        <i class="pin pin--you" style="--x:0.46875;--y:0.5208" data-pin></i>
+        <div class="callout-pin" style="--x:0.46875;--y:0.5208" data-system data-dummy="D41" aria-label="An illustration: a sample café on MM Alam Road, Lahore. Reviews arrive from a counter stand, a tap card and WhatsApp; its Google rating rises from 4.0 with 18 reviews to 4.7 with 64, and it moves from third to first on Google Maps.">
+          <div class="toasts" data-toasts aria-hidden="true"></div>
+          <p class="callout-pin__card"><b>Bloom Café</b><span><em data-pinrating>4.8</em> ★ · <span data-reviews>64</span> reviews · <strong>#<span data-rank>1</span></strong> on Maps</span></p>
+        </div>
+        <span class="map__street" style="--x:0.474;--y:0.585">MM Alam Road</span>
+      </div>
+      </div>
+    </div>
+
+  <!-- 1 · The result first: reviews arriving from three ways in, the rating climbing -->
+  <section class="intro" id="top" aria-labelledby="hero-title">
+    <h1 id="hero-title" class="display intro__title">More reviews.<br>Higher on Google.<br><span class="accent-phrase">More customers.</span></h1>
+    <div class="intro__foot">
+      <p class="lede">Every happy customer, asked for a Google review: at your counter or on WhatsApp, in Urdu or English.</p>
+      <div class="actions">
+        <a class="btn btn--gold" data-wa href="#" target="_blank" rel="noopener" data-dummy="D01 D10">Start free month <span aria-hidden="true">→</span></a>
+        <a class="link" href="#how">See how it works</a>
+      </div>
+      <p class="note">For cafés, salons, clinics, gyms and shops.</p>
+    </div>
+  </section>
+
+  <!-- 2 · Three ways in, one review page: the stand, the card and the message, by the scroll -->
+  <section class="stage" id="how" data-card-stage aria-labelledby="how-title">
+    <div class="stage__pin" data-card-pin>
+      <canvas class="stage__canvas" data-card-canvas aria-hidden="true"></canvas>
+      <h2 class="stage__title" id="how-title">Three ways in.<br>One review page.</h2>
+      <div class="beats">
+        <article class="beat" data-beat><h3>At the counter</h3><p>A sturdy acrylic stand by the till. Customers scan the QR code or hold their phone to it. Both open your review page.</p></article>
+        <article class="beat" data-beat><h3>At the till</h3><p>A tap card for the cash desk or the table. The same page, the same one tap.</p></article>
+        <article class="beat" data-beat><h3>On WhatsApp</h3><p>Your staff send one message from your own number, in Urdu or English. No app, no bulk tools, no risk to your number.</p></article>
+      </div>
+      <div class="wa" data-wa-chat data-ui data-dummy="D40" aria-label="A WhatsApp message from the business to a customer">
+        <div class="wa__head"><span class="wa__avatar" aria-hidden="true">BC</span><span><b>Bloom Café</b>business account</span></div>
+        <div class="wa__body">
+          <p class="wa__msg">Assalam o Alaikum Ali! Shukriya Bloom Café aane ka. Agar aap ko hamari service achi lagi, to 30 seconds mein Google pe review dein:<br><u>reputra.pk/r/bloom-cafe</u><time>13:42 ✓✓</time></p>
+        </div>
+      </div>
+      <p class="stage__closing" data-card-closing>All three open one page.<br>A customer taps.</p>
+      <div class="burst" data-burst aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+      <div class="wipe" data-wipe><p>Their review page opens.</p></div>
+    </div>
+  </section>
+
+  <!-- 2 · What the customer sees: the real page, live -->
+  <section class="try" id="try" aria-labelledby="try-title">
+    <div class="try__copy">
+      <h2 id="try-title" class="h2">Here it is. Try it.</h2>
+      <p>Your logo, your name and one question, in your customer's language. Pick a kind of business, switch the language, tap the stars.</p>
+      <div class="kinds" role="group" aria-label="Kind of business">
+        <button type="button" aria-pressed="true" data-kind="cafe">Café</button>
+        <button type="button" aria-pressed="false" data-kind="salon">Salon</button>
+        <button type="button" aria-pressed="false" data-kind="clinic">Clinic</button>
+        <button type="button" aria-pressed="false" data-kind="gym">Gym</button>
+        <button type="button" aria-pressed="false" data-kind="shop">Shop</button>
+      </div>
+      <ul class="facts">
+        <li><b>30 sec</b><span>from tap to posted review</span></li>
+        <li><b>0 apps</b><span>to download or sign in to</span></li>
+        <li><b>3 languages</b><span>Urdu, Roman Urdu, English</span></li>
+      </ul>
+    </div>
+    <div class="review" data-review data-ui data-dummy="D15">
+      <div class="review__bar">
+        <span class="review__url" data-b="url">reputra.pk/r/bloom-cafe</span>
+        <div class="seg" role="group" aria-label="Language">
+          <button type="button" aria-pressed="false" data-lang="en">English</button>
+          <button type="button" aria-pressed="true" data-lang="ro">Roman Urdu</button>
+          <button type="button" aria-pressed="false" data-lang="ur" class="ur">اردو</button>
+        </div>
+      </div>
+      <div class="review__body">
+        <span class="review__logo" aria-hidden="true" data-b="logo">BC</span>
+        <p class="review__name" data-b="name">Bloom Café</p>
+        <p class="review__area" data-b="area">MM Alam Road, Lahore</p>
+        <p class="review__q" data-t="q">Aap ka experience kaisa tha?</p>
+        <div class="review__stars" role="radiogroup" aria-label="Your rating">
+          <button type="button" role="radio" aria-checked="false" aria-label="1 star"></button>
+          <button type="button" role="radio" aria-checked="false" aria-label="2 stars"></button>
+          <button type="button" role="radio" aria-checked="false" aria-label="3 stars"></button>
+          <button type="button" role="radio" aria-checked="false" aria-label="4 stars"></button>
+          <button type="button" role="radio" aria-checked="false" aria-label="5 stars"></button>
+        </div>
+        <button type="button" class="review__google" data-google data-t="btn">Google pe review dein</button>
+        <button type="button" class="review__private" data-t="private">Private feedback bhejein</button>
+        <p class="review__toast" data-toast role="status"></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3 · How reviews turn into customers -->
+  <section class="grow" id="grow" aria-labelledby="grow-title">
+    <div class="grow__copy">
+      <h2 id="grow-title" class="h2">People pick the one with <span class="accent-phrase">more reviews.</span></h2>
+      <p>Google ranks local businesses partly on their reviews: how many you have and how good they are. When people search "near me", the ones at the top get the calls, the directions and the visits.</p>
+      <ol class="grow__steps">
+        <li><b>More reviews</b><span>Every happy customer can leave one, in ten seconds.</span></li>
+        <li><b>A higher place on Google Maps</b><span>Count and rating both count.</span></li>
+        <li><b>More people walk in</b><span>Calls, directions and visits from Google.</span></li>
+      </ol>
+    </div>
+    <div class="maps" data-maps data-ui data-dummy="D39">
+      <div class="maps__search"><span aria-hidden="true">⌕</span> café near me</div>
+      <ol class="maps__list">
+        <li style="--pos:0" data-row="a"><span class="maps__pin">A</span><div><b>Chai Junction</b><small><em data-r>4.4</em> ★ · <em data-n>58</em> reviews · 0.6 km</small></div></li>
+        <li style="--pos:1" data-row="b"><span class="maps__pin">B</span><div><b>The Daily Grind</b><small><em data-r>4.3</em> ★ · <em data-n>41</em> reviews · 0.9 km</small></div></li>
+        <li style="--pos:2" data-row="you" class="is-you"><span class="maps__pin">C</span><div><b>Bloom Café <i>You</i></b><small><em data-r data-from="4.1" data-to="4.8">4.1</em> ★ · <em data-n data-from="18" data-to="64">18</em> reviews · 0.7 km</small></div></li>
+      </ol>
+      <p class="maps__note">Month one with Reputra: 18 → 64 reviews, 4.1 → 4.8.</p>
+    </div>
+  </section>
+
+  <!-- 4 · The rules -->
+  <section class="rules" aria-labelledby="rules-title">
+    <div class="rules__head">
+      <h2 id="rules-title" class="h2">What we will never do.</h2>
+      <p>Reputra is built around Google's review rules. If a business wants any of these broken, Reputra is not for that business.</p>
+    </div>
+    <ul class="rules__list">
+      <li><span><s>Hide the Google button from unhappy customers.</s></span><small>Every customer sees it, happy or not.</small></li>
+      <li><span><s>Offer gifts or discounts for reviews.</s></span><small>Not once, not as a "thank you".</small></li>
+      <li><span><s>Write or buy a review.</s></span><small>Every review comes from a real visit.</small></li>
+      <li><span><s>Send bulk WhatsApp messages.</s></span><small>One at a time, from your own number.</small></li>
+    </ul>
+  </section>
+
+  <!-- 4 · Who is behind it -->
+  <section class="promise" aria-labelledby="promise-title">
+    <h2 id="promise-title" class="h2">We're new, so here is what we promise.</h2>
+    <blockquote class="founder" data-dummy="D37">
+      <p>“I set up every business myself, in person. If the card doesn't bring you more Google reviews in the first month, you don't pay anything.”</p>
+      <footer>
+        <span class="monogram" data-dummy="D36" aria-hidden="true">R</span>
+        <span><b data-dummy="D35">[Your name]</b><br>Founder, Reputra · Lahore</span>
+      </footer>
+    </blockquote>
+    <p class="promise__offer" data-dummy="D38">Founding businesses in Lahore: first month free, set up in person. We're starting with a small number of businesses so each one gets it properly.</p>
+  </section>
+
+  <!-- 5 · Your month -->
+  <section class="month" aria-labelledby="month-title">
+    <div class="month__head">
+      <h2 id="month-title" class="h2">Your month, at a glance.</h2>
+      <p>The report you get on the first of every month, on WhatsApp and in your dashboard.</p>
+    </div>
+    <div class="month__grid" data-ui data-dummy="D19">
+      <article class="card card--big">
+        <p class="card__label">Google reviews, October</p>
+        <p class="bigfig"><span>18</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15m-5-5 5 5-5 5"/></svg><span>64</span></p>
+        <p class="card__sub">+46 new reviews · rating 4.6 → 4.8</p>
+        <div class="spark" aria-hidden="true"><i style="--h:22%;--n:0"></i><i style="--h:30%;--n:1"></i><i style="--h:26%;--n:2"></i><i style="--h:41%;--n:3"></i><i style="--h:48%;--n:4"></i><i style="--h:44%;--n:5"></i><i style="--h:58%;--n:6"></i><i style="--h:63%;--n:7"></i><i style="--h:71%;--n:8"></i><i style="--h:69%;--n:9"></i><i style="--h:84%;--n:10"></i><i style="--h:92%;--n:11"></i></div>
+      </article>
+      <article class="card" data-dummy="D17">
+        <p class="card__label">Staff leaderboard</p>
+        <ol class="board">
+          <li><span>Sana</span><i style="--w:100%"></i><b>22</b></li>
+          <li><span>Kamran</span><i style="--w:68%"></i><b>15</b></li>
+          <li><span>Dr. Imran</span><i style="--w:41%"></i><b>9</b></li>
+        </ol>
+        <p class="card__sub">Google reviews each person brought in.</p>
+      </article>
+      <article class="card card--wa">
+        <p class="card__label">Monthly report, on WhatsApp</p>
+        <div class="bubble"><b>Reputra · 1 Nov, 9:00</b>October report, Bloom Café. Google reviews 18 → 64 (+46). Rating 4.6 → 4.8. Top staff: Sana (22).</div>
+      </article>
+      <article class="card" data-dummy="D20">
+        <p class="card__label">Private feedback</p>
+        <p class="quote">“The food took a while, but the staff were lovely.”</p>
+        <p class="card__sub">Mariam A. · 13:16. Sent only to you. The Google button stayed on her screen.</p>
+      </article>
+    </div>
+  </section>
+
+  <!-- 6 · The estimate -->
+  <section class="estimate" aria-labelledby="estimate-title" data-estimate>
+    <div class="estimate__copy">
+      <h2 id="estimate-title" class="h2">What one month could add.</h2>
+      <p>Set the sliders to your usual day.</p>
+      <label class="slider"><span>Customers a day <output data-out="patients">25</output></span><input type="range" min="5" max="80" value="25" data-in="patients" data-dummy="D14"></label>
+      <label class="slider"><span>Google reviews now <output data-out="reviews">18</output></span><input type="range" min="0" max="300" value="18" data-in="reviews"></label>
+    </div>
+    <div class="estimate__result">
+      <p class="estimate__fig" data-out="total">70</p>
+      <p class="estimate__label">Google reviews by the end of next month: <span data-out="reviews2">18</span> today, about <span data-out="added">52</span> more from <span data-out="patients2">25</span> customers a day.</p>
+      <p class="estimate__fine" data-dummy="D12">Assumes 8 in 100 customers you ask leave a review, over 26 working days. An estimate, not a promise.</p>
+    </div>
+  </section>
+
+  <!-- 7 · Pricing -->
+  <section class="pricing" id="pricing" aria-labelledby="pricing-title">
+    <div class="pricing__head">
+      <h2 id="pricing-title" class="h2">Plans in rupees.</h2>
+      <p>The first month is free. After that, cancel any month; the card and the stand stay with you.</p>
+    </div>
+    <div class="plans" data-dummy="D07">
+      <article class="plan">
+        <h3 class="plan__name">Basic</h3>
+        <p class="plan__price">PKR 3,999<small>a month</small></p>
+        <p class="plan__for">One location, one counter.</p>
+        <ul><li>Your review page, in three languages</li><li>Counter stand, tap card and WhatsApp links</li><li>Stats and before-after count</li><li>Feedback alerts by email</li><li>WhatsApp support</li></ul>
+        <a class="btn btn--ghost" data-wa href="#" target="_blank" rel="noopener">Start free month</a>
+      </article>
+      <article class="plan plan--pro">
+        <h3 class="plan__name">Pro <span>Most choose this</span></h3>
+        <p class="plan__price">PKR 7,999<small>a month</small></p>
+        <p class="plan__for">Busy counters with staff.</p>
+        <ul><li>Everything in Basic</li><li>Staff leaderboard</li><li>Monthly report on WhatsApp</li><li>Feedback alerts on WhatsApp</li><li>Same-day support</li></ul>
+        <a class="btn btn--gold" data-wa href="#" target="_blank" rel="noopener">Start free month</a>
+      </article>
+      <article class="plan">
+        <h3 class="plan__name">Business</h3>
+        <p class="plan__price">PKR 14,999<small>a month and up</small></p>
+        <p class="plan__for">Several branches.</p>
+        <ul><li>Everything in Pro</li><li>Every branch in one place</li><li>A named support person</li></ul>
+        <a class="btn btn--ghost" data-wa data-msg="Assalam o Alaikum! I'd like to talk about Reputra for several branches." href="#" target="_blank" rel="noopener">Talk to us</a>
+      </article>
+    </div>
+    <p class="pricing__fine" data-dummy="D08">Setup pack PKR 3,000–6,000 once: two counter stands (QR and tap), one tap card, and setup in person. The stands and card are yours to keep. Pay by Raast, JazzCash, Easypaisa or bank transfer. Pay yearly and get two months free.</p>
+  </section>
+
+  <!-- 8 · Questions -->
+  <section class="faq" id="questions" aria-labelledby="faq-title">
+    <h2 id="faq-title" class="h2">Questions owners ask us.</h2>
+    <div class="faq__list">
+      <details open><summary>Is this allowed by Google?</summary><p>Yes. We only link to Google's own review box, every customer sees the Google button, and we never offer gifts for reviews. Those are Google's rules, and Reputra is built around them.</p></details>
+      <details><summary>Does the customer need an app?</summary><p>No. They hold their phone to the card or scan the QR code, a page opens in their browser, and one more tap opens Google's review box.</p></details>
+      <details><summary>What is in the setup pack?</summary><p>Two counter stands, each with a QR code and a tap spot, and one tap card for the till. We set them up in person and link them to your review page. They are yours to keep, even if you stop.</p></details>
+      <details><summary>Does every phone work?</summary><p>Almost every phone made in the last five years can tap. For the rest, the QR code on the stand and on the back of the card does the same job.</p></details>
+      <details><summary>Will my WhatsApp number get banned?</summary><p>No. Messages go one at a time from your own WhatsApp, sent by your staff to customers who visited. We don't use bulk-sending tools.</p></details>
+      <details><summary>What if a customer is unhappy?</summary><p>They can send you private feedback first, and you get an alert. The Google button stays on their screen too, because hiding it is against Google's rules.</p></details>
+      <details><summary>How do I pay, and can I cancel?</summary><p>Raast, JazzCash, Easypaisa or bank transfer, monthly or yearly. Cancel any month, with no fee. The card and the stand stay with you.</p></details>
+    </div>
+  </section>
+
+  <!-- 9 · Close: the card comes back to rest -->
+  <section class="close" aria-labelledby="close-title">
+    <div class="close__copy">
+      <h2 id="close-title" class="display display--close">Your counter<br><span class="accent-phrase">is next.</span></h2>
+      <p>Message us on WhatsApp. We visit, set up the card and the stand, and show your staff how to ask. Your reviews start growing the same day.</p>
+      <div class="actions">
+        <a class="btn btn--gold" data-wa href="#" target="_blank" rel="noopener" data-dummy="D01">Start free month <span aria-hidden="true">→</span></a>
+      </div>
+      <p class="note" data-dummy="D02">Rather not use WhatsApp? Email <a href="mailto:hello@reputra.pk">hello@reputra.pk</a> or call <a href="tel:+923000000000">+92 300 0000000</a>.</p>
+    </div>
+    <div class="close__stage" data-close-stage aria-hidden="true"></div>
+  </section>
+</main>
+
+<footer class="footer">
+  <a class="brand" href="#top">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="7.5" cy="12" r="3.6"/><path d="M13.93 4.34A10 10 0 0 1 13.93 19.66"/></svg>
+    reputra
+  </a>
+  <nav aria-label="Legal"><a href="/privacy">Privacy</a><a href="/terms">Terms</a><a href="/refunds">Refunds</a></nav>
+  <p class="credits">© 2026 Reputra · Lahore. Map data © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors.</p>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/lenis@1.1.13/dist/lenis.min.js"></script>
+<script src="site.js"></script>
+</body>
+</html>
