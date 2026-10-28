@@ -15,7 +15,9 @@ export type Copy = {
   happy: string;
   unhappy: string;
   google: string;
-  googleNote: string;
+  // Google's own review box can't be opened with stars already filled in, so the customer is
+  // told exactly what to tap there: the same number they just chose.
+  googleNote: (stars: number) => string;
   opening: string;
   skip: string;
   private: string;
@@ -35,7 +37,7 @@ export const COPY: Record<Lang, Copy> = {
     happy: "Thank you! Would you say that on Google? It takes about 30 seconds and helps other people find us.",
     unhappy: "Thank you for being honest. Tell the owner what went wrong, or share your review on Google.",
     google: "Post it on Google",
-    googleNote: "Google opens its own review box and asks for your stars once more.",
+    googleNote: (n) => `Google opens its own review box: tap ${n} ${n === 1 ? "star" : "stars"} there again, then write a line.`,
     opening: "Opening Google…",
     skip: "Go straight to Google",
     private: "Tell the owner privately",
@@ -62,7 +64,7 @@ export const COPY: Record<Lang, Copy> = {
     happy: "Shukriya! Kya aap Google par bhi bata denge? Sirf 30 second lagte hain aur doosron ko hamein dhoondne mein madad milti hai.",
     unhappy: "Sach batane ka shukriya. Owner ko batayein kya ghalat hua, ya Google par apna review dein.",
     google: "Google par review dein",
-    googleNote: "Google apna review box kholega aur aap se dobara stars poochega.",
+    googleNote: (n) => `Google apna review box kholega: wahan dobara ${n} star dabayein, phir ek line likhein.`,
     opening: "Google khul raha hai…",
     skip: "Seedha Google par jayein",
     private: "Owner ko privately batayein",
@@ -89,7 +91,7 @@ export const COPY: Record<Lang, Copy> = {
     happy: "شکریہ! کیا آپ گوگل پر بھی بتا دیں گے؟ صرف تیس سیکنڈ لگتے ہیں اور دوسروں کو ہمیں ڈھونڈنے میں مدد ملتی ہے۔",
     unhappy: "سچ بتانے کا شکریہ۔ مالک کو بتائیں کہ کیا غلط ہوا، یا گوگل پر اپنا ریویو دیں۔",
     google: "گوگل پر ریویو دیں",
-    googleNote: "گوگل اپنا ریویو باکس کھولے گا اور آپ سے دوبارہ ستارے پوچھے گا۔",
+    googleNote: (n) => `گوگل اپنا ریویو باکس کھولے گا: وہاں دوبارہ ${n} ستارے دبائیں، پھر ایک سطر لکھیں۔`,
     opening: "گوگل کھل رہا ہے…",
     skip: "سیدھا گوگل پر جائیں",
     private: "مالک کو نجی طور پر بتائیں",

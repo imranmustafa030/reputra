@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { sendFeedback } from "@/app/actions/feedback";
 import { SubmitButton } from "@/components/form";
 import type { Copy } from "./copy";
@@ -24,6 +24,25 @@ export function PrivateFeedback({
 }) {
   const [open, setOpen] = useState(false);
   const [state, action] = useActionState(sendFeedback, undefined);
+  const form = useRef<HTMLFormElement>(null);
+
+  // On a phone the note box opens with a short animation while the keyboard slides up, which
+  // would leave it half hidden. Once it has opened (and again when the keyboard changes the
+  // visible area), it is scrolled to the top of the screen, clear of the keyboard.
+  useEffect(() => {
+    if (!open) return;
+    const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const lift = () => form.current?.scrollIntoView({ block: "start", behavior: still ? "auto" : "smooth" });
+    const timer = setTimeout(lift, 460);
+    const vv = window.visualViewport;
+    const until = Date.now() + 1500;
+    const onResize = () => Date.now() < until && lift();
+    vv?.addEventListener("resize", onResize);
+    return () => {
+      clearTimeout(timer);
+      vv?.removeEventListener("resize", onResize);
+    };
+  }, [open]);
 
   if (state?.ok) {
     return (
@@ -58,7 +77,7 @@ export function PrivateFeedback({
       <div className={`rv-reveal ${open ? "is-open" : ""}`}>
         <div className="rv-reveal-inner">
           {open && (
-            <form action={action} className="mt-6 grid gap-4 border-t border-(--rv-line) pt-6">
+            <form ref={form} action={action} className="mt-6 grid scroll-mt-4 gap-4 border-t border-(--rv-line) pt-6">
               <input type="hidden" name="slug" value={slug} />
               <input type="hidden" name="source" value={source} />
               <input type="text" name="website" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden="true" />
