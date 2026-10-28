@@ -10,9 +10,16 @@ const geist = Geist({ variable: "--font-geist", subsets: ["latin"] });
 // Mono is only used in the dashboard, so it is not preloaded on every page (the review page is the hot path).
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"], preload: false });
 
+// Share images need absolute links. SITE_URL pins the domain; until there is one, Vercel's own
+// production address is used (Vercel switches it to the domain once one is added).
+const site = process.env.SITE_URL || (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : "http://localhost:3000");
+
 export const metadata: Metadata = {
+  metadataBase: new URL(site),
   title: { default: "Reputra", template: "%s · Reputra" },
   description: "More Google reviews for local businesses in Pakistan, from a counter stand, a tap card or WhatsApp.",
+  openGraph: { siteName: "Reputra", type: "website", locale: "en_PK" },
+  twitter: { card: "summary_large_image" },
   icons: {
     icon: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='6' fill='%230b0c0e'/%3E%3Ccircle cx='8.5' cy='12' r='3.2' fill='%23f0ad2e'/%3E%3Cpath d='M14.2 5.4a8.6 8.6 0 0 1 0 13.2' fill='none' stroke='%23f0ad2e' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E",
   },

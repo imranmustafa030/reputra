@@ -10,7 +10,15 @@ import { ReviewFlow } from "@/app/r/[slug]/review-flow";
 import { ReviewShell, ReviewSkeleton } from "@/app/r/[slug]/review-shell";
 import { VisitBeacon } from "@/app/r/[slug]/visit-beacon";
 
-export const metadata: Metadata = { title: "Leave a review", robots: { index: false } };
+// The link preview in WhatsApp names the business, so the customer knows who is asking.
+export async function generateMetadata({ params }: PageProps<"/t/[code]">): Promise<Metadata> {
+  const { code } = await params;
+  const entry = await getPublicEntry(code.toUpperCase());
+  const name = entry && !entry.off ? entry.business.name : null;
+  const title = name ? `Review ${name}` : "Leave a review";
+  const description = name ? `How was your visit at ${name}? Tap a star, it takes 30 seconds.` : "How was your visit? Tap a star, it takes 30 seconds.";
+  return { title, description, robots: { index: false }, openGraph: { title, description }, twitter: { title, description } };
+}
 
 // The page a customer lands on from a printed item or a link: reputra.pk/t/K7X9Q2.
 // The code says which item it is (a stand's NFC chip adds ?s=nfc), never the business name.
