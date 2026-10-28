@@ -7,6 +7,7 @@ import { formatDay, METHOD_NAMES, PLAN_NAMES } from "@/lib/labels";
 import type { PlanCode } from "@/models/Plan";
 import { formatPKR } from "@/lib/plans";
 import { Payment } from "@/models/Payment";
+import { AboutForm } from "./about-form";
 
 export const metadata: Metadata = { title: "You’re on" };
 
@@ -49,6 +50,8 @@ async function Done({ searchParams }: Pick<PageProps<"/checkout/done">, "searchP
         <Row label="Paid by" value={`${METHOD_NAMES[payment.method]}${payment.transactionId ? ` · TID ${payment.transactionId}` : ""}`} />
         <Row label="Status" value={<span className={`pill ${checking ? "pill-notice" : "pill-positive"}`}>{checking ? "Checking" : "Paid"}</span>} />
       </dl>
+
+      {payment.firstPayment && <AboutForm initial={business.description} />}
 
       {payment.firstPayment && (
         <div className="mt-8">

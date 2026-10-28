@@ -30,6 +30,7 @@ export default async function SettingsPage() {
           googleReviewUrl: business.googleReviewUrl,
           googlePlace: business.googlePlace,
           whatsappMessage: business.whatsappMessage,
+          description: business.description,
           introAnimation: business.introAnimation !== false,
         }}
         pageUrl={links.plain}

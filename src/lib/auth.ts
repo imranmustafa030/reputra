@@ -49,6 +49,7 @@ export const requireOwner = cache(async () => {
       googleReviewUrl: business.googleReviewUrl,
       googlePlace: business.googlePlace ? (business.googlePlace as GooglePlace) : null,
       whatsappMessage: business.whatsappMessage,
+      description: business.description ?? "",
       introAnimation: business.introAnimation !== false,
       suspended: business.status === "suspended",
       demo: business.demo,

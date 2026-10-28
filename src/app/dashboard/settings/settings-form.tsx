@@ -15,6 +15,7 @@ type Business = {
   googleReviewUrl: string;
   googlePlace: GooglePlace | null;
   whatsappMessage: string;
+  description: string;
   introAnimation: boolean;
 };
 type TextKey = Exclude<keyof Business, "introAnimation" | "googlePlace" | "googleReviewUrl">;
@@ -35,6 +36,7 @@ export function SettingsForm({
   const value = (key: TextKey) => state?.values?.[key] ?? business[key];
   const [message, setMessage] = useState(business.whatsappMessage);
   const [intro, setIntro] = useState(business.introAnimation);
+  const [about, setAbout] = useState(business.description);
   const previewHref = `${pageUrl}${pageUrl.includes("?") ? "&" : "?"}preview=1`;
 
   return (
@@ -69,6 +71,10 @@ export function SettingsForm({
         <p className="hint">
           Review page: <span className="font-mono text-ink">{pageUrl}</span>. This address never changes, so printed stands keep working.
         </p>
+      </Row>
+
+      <Row id="about" title="About your business" description="A line or two, in your own words. Your review page uses it to suggest what customers can pick when they write their review.">
+        <AboutField value={value("description")} onChange={setAbout} length={about.length} />
       </Row>
 
       <Row id="google" title="Google review link" description="Where “Review us on Google” takes your customers.">
@@ -127,6 +133,37 @@ export function SettingsForm({
         <SubmitButton pending="Saving…">Save changes</SubmitButton>
       </div>
     </form>
+  );
+}
+
+export const ABOUT_MAX = 400;
+export const ABOUT_EXAMPLE = "For example: Family restaurant in Gulberg since 2015. Known for our chicken karahi, fresh naan and quick service. Indoor seating and parking.";
+
+export function AboutField({ value, onChange, length, autoFocus }: { value: string; onChange: (v: string) => void; length: number; autoFocus?: boolean }) {
+  return (
+    <>
+      <label className="label" htmlFor="description">
+        Description
+      </label>
+      <textarea
+        className="input"
+        id="description"
+        name="description"
+        rows={3}
+        maxLength={ABOUT_MAX}
+        defaultValue={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={ABOUT_EXAMPLE}
+        aria-describedby="description-hint"
+        autoFocus={autoFocus}
+      />
+      <p id="description-hint" className="hint flex justify-between gap-4">
+        <span>What you’re known for: dishes, services, the place. Customers only see the picks, never this text.</span>
+        <span className={`num shrink-0 ${length > ABOUT_MAX - 40 ? "text-ink" : ""}`}>
+          {length}/{ABOUT_MAX}
+        </span>
+      </p>
+    </>
   );
 }
 

@@ -82,13 +82,16 @@ The top bar has **Log in** (for existing customers) and **Get started**.
 ### 4.2 Customer side: the review page ✅
 
 - Opens from the QR code, the NFC tap or the WhatsApp link. No app, no login.
-- Shows "Thank you for visiting **[Business name]**", five stars, and the two buttons.
-- "Review us on Google" counts the tap, then opens Google's review box.
-- "Tell the owner privately" opens a short form: message (required), name and phone (optional, for a reply).
+- Shows "Thank you for visiting **[Business name]**" and five stars, in Roman Urdu (the default), English or Urdu.
+- Every step is one full phone screen, no scrolling, and the phone's back gesture goes back one step. The language switch is only on the stars screen.
+- **4 or 5 stars:** straight to "What stood out?" (simple tap-to-pick words in the customer's language, plus an optional line). We write it up three ways (very short, short, a bit longer) from their picks only; they pick one, can change any word, and one tap copies it and opens Google's review box to paste. The writing is done by Google's free Gemini AI; without it, simple ready-made sentences are used, so it always works.
+- **1 to 3 stars:** straight to a private note to the owner. Under it, a quieter line still offers Google ("Rather post it on Google?"), which leads to the same writing help with "could be better" picks.
+- Then a thank-you screen (coming back from Google lands on it too, with "copy again").
+- The picks are made by AI on the spot for each business, in the customer's language and for their rating: mostly general (staff, speed, cleanliness, price, the place), and a dish or product only when the owner's "About your business" line (Settings, also asked right after the first payment) clearly says they offer it. Kept for 30 minutes per business; if the AI is down, a few general picks are used.
+- The private note: message (required), name and phone (optional, for a reply).
 - If the team pauses an account, its review page shows "not found".
 
 To come:
-- ⬜ Urdu and Roman Urdu versions of the page (the website promises "in Urdu or English")
 - ⬜ The business's logo on the page
 
 ### 4.3 Business owner side: the dashboard ✅
@@ -173,9 +176,9 @@ Only Reputra team accounts can open it. The first admin is created by the seed (
 
 ## 7. Rules we never break (Google's review rules)
 
-1. **Every customer sees the Google button**, happy or not. We never hide it from unhappy customers.
+1. **Every customer can reach Google**, happy or not. Unhappy customers (1–3 stars) see the private note first and Google as a smaller line under it (the owner's choice, 29 Oct 2026). Google's policy forbids discouraging negative reviews, so the Google line must never be removed or hidden; if Google flags the listing, make it equal again.
 2. **No gifts or discounts for reviews.** Not once, not as a "thank you".
-3. **No fake or bought reviews.** Every review comes from a real visit.
+3. **No fake or bought reviews.** Every review comes from a real visit. The writing help only words what the customer picked and typed; they read it, can change it, and post it themselves.
 4. **No bulk WhatsApp.** One message at a time, from the business's own number, to customers who actually visited. (The pasted list still opens WhatsApp one customer per tap.)
 
 ---

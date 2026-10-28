@@ -1,9 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { flushSync } from "react-dom";
 import { ArrowRight, Moon, Sun } from "lucide-react";
 import { COPY, LANG_NAMES, LANGS, type Lang } from "./copy";
-import { PrivateFeedback } from "./private-feedback";
+import { DraftsStep, legacyCopy, MAX_PICKS, NoteStep, PicksStep, StepBar, ThanksStep, type Drafts } from "./steps";
 
 type Props = {
   // slug: what the page reports back with (the item's code, or the old slug); base: the page's own address.
@@ -12,16 +13,18 @@ type Props = {
   preview?: boolean;
 };
 
+type Screen = "rate" | "picks" | "drafts" | "note" | "thanks";
+
 const LANG_KEY = "reputra:lang";
 
-// The language a customer chose last time, read without a flash: English on the server,
-// their saved choice on the first client render.
+// The language a customer chose last time, read without a flash: Roman Urdu (how most customers
+// write on WhatsApp) on the server and for a first visit, their saved choice after that.
 function savedLang(): Lang {
   try {
     const v = localStorage.getItem(LANG_KEY) as Lang | null;
-    return v && LANGS.includes(v) ? v : "en";
+    return v && LANGS.includes(v) ? v : "roman";
   } catch {
-    return "en";
+    return "roman";
   }
 }
 const noSubscribe = () => () => {};
@@ -35,23 +38,77 @@ function savedTheme(): "light" | "dark" {
     return "light";
   }
 }
+// Back from Google: phones often reload the page rather than restore it, so the thank-you (and
+// the review, for "copy again") is kept for this tab for half an hour.
+type Done = { at: number; text: string; rating: number };
+const DONE_FOR = 30 * 60_000;
+let doneCache: { raw: string | null; value: Done | null } = { raw: null, value: null };
+function readDone(key: string): Done | null {
+  try {
+    const raw = sessionStorage.getItem(key);
+    if (raw !== doneCache.raw) doneCache = { raw, value: raw ? (JSON.parse(raw) as Done) : null };
+    return doneCache.value && Date.now() - doneCache.value.at < DONE_FOR ? doneCache.value : null;
+  } catch {
+    return null;
+  }
+}
+
 const SPARKS = Array.from({ length: 12 }, (_, i) => {
   const a = (i / 12) * Math.PI * 2;
   const r = 34 + (i % 3) * 10;
   return { x: Math.cos(a) * r, y: Math.sin(a) * r, s: i % 2 ? 4 : 6 };
 });
 
-// The customer's whole visit to Reputra: tap the stars, then choose Google or a private note.
-// Both choices are shown for every rating, the same way: Google's rules forbid steering only
-// happy customers to a review. The stars are recorded so the owner learns how visits felt.
+// The time the tapped stars get to play (fill, ripple, burst) before the next step comes in.
+const ADVANCE_MS = 650;
+
+// The customer's whole visit to Reputra, as full-screen steps that fit a phone without scrolling.
+// Stars first (the only screen with the language and theme switches). From 4 stars: what stood
+// out → three drafts written from those picks → copy and open Google. From 1 to 3 stars: a private
+// note to the owner, with Google still offered as a quieter line under it. Then a thank-you.
+// Steps move with the browser's view transitions (the old step recedes, the new one comes
+// forward) and each is a history entry, so the phone's back gesture goes back one step.
+// The stars are recorded so the owner learns how visits felt.
 export function ReviewFlow({ business, source, preview = false }: Props) {
-  const stored = useSyncExternalStore(noSubscribe, savedLang, () => "en" as Lang);
+  const stored = useSyncExternalStore(noSubscribe, savedLang, () => "roman" as Lang);
   const [picked, setPicked] = useState<Lang | null>(null);
   const lang = picked ?? stored;
   const storedTheme = useSyncExternalStore(noSubscribe, savedTheme, () => "light" as const);
   const [pickedTheme, setPickedTheme] = useState<"light" | "dark" | null>(null);
   const theme = pickedTheme ?? storedTheme;
   const root = useRef<HTMLDivElement>(null);
+
+  const [screenState, setScreen] = useState<Screen | null>(null);
+  const [enter, setEnter] = useState<"" | "fwd" | "back">(""); // CSS entrance where view transitions aren't available
+  const [ratingState, setRating] = useState(0);
+  const [hover, setHover] = useState(0);
+  const [burst, setBurst] = useState(0); // bumps on every tap, replays the ripple
+  const [picks, setPicks] = useState<string[]>([]); // by position in the words below ("g2", "b0")
+  // The tap-to-pick words, made by AI for this business, language and rating; asked for the moment
+  // the stars are tapped so they are usually ready when the screen comes in.
+  const [words, setWords] = useState<{ key: string; good: string[]; bad: string[] } | null>(null);
+  const wordsRequest = useRef<string>("");
+  const [extra, setExtra] = useState("");
+  const [needPick, setNeedPick] = useState(false);
+  const [drafts, setDrafts] = useState<Drafts | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const [chosen, setChosen] = useState(1);
+  const [copied, setCopied] = useState(false);
+  const [copyFailed, setCopyFailed] = useState(false);
+  const [thanks, setThanks] = useState<"google" | "note">("google");
+  const sent = useRef(false);
+  const latest = useRef(0);
+  const advance = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const request = useRef<AbortController | null>(null);
+  const t = COPY[lang];
+  const rtl = lang === "ur";
+  const googleHref = `${business.base ?? `/r/${business.slug}`}/go?s=${source}`;
+  const doneKey = `reputra:done:${business.slug}`;
+  const restored = useSyncExternalStore(noSubscribe, () => readDone(doneKey), () => null);
+  const screen = screenState ?? (restored ? "thanks" : "rate");
+  const rating = ratingState || (screenState ? 0 : (restored?.rating ?? 0));
+  const happy = rating >= 4;
 
   // The page's colours live on the server-rendered <main>; point it at the chosen theme.
   useEffect(() => {
@@ -65,13 +122,6 @@ export function ReviewFlow({ business, source, preview = false }: Props) {
       localStorage.setItem(THEME_KEY, next);
     } catch {}
   }
-  const [rating, setRating] = useState(0);
-  const [hover, setHover] = useState(0);
-  const [burst, setBurst] = useState(0); // bumps on every tap, replays the ripple
-  const [leaving, setLeaving] = useState(false);
-  const sent = useRef(false);
-  const latest = useRef(0);
-  const t = COPY[lang];
 
   // One rating per tab, sent when the customer acts, leaves, or has settled for a few seconds.
   const flush = useCallback(() => {
@@ -84,12 +134,7 @@ export function ReviewFlow({ business, source, preview = false }: Props) {
     fetch("/api/events", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        slug: business.slug,
-        source,
-        type: "rating",
-        value: latest.current,
-      }),
+      body: JSON.stringify({ slug: business.slug, source, type: "rating", value: latest.current }),
       keepalive: true,
     }).catch(() => {});
   }, [business.slug, source, preview]);
@@ -105,13 +150,50 @@ export function ReviewFlow({ business, source, preview = false }: Props) {
     };
   }, [rating, flush]);
 
-  function choose(n: number) {
+  // Moves to a step. Forward steps are history entries; the back gesture comes in through popstate.
+  const show = useCallback((next: Screen, how: { back?: boolean; push?: boolean } = {}) => {
+    const dir = how.back ? "back" : "fwd";
+    if (how.push) history.pushState({ rv: next }, "");
+    window.scrollTo(0, 0);
+    const motion = !matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (motion && document.startViewTransition) {
+      document.documentElement.dataset.rvDir = dir;
+      document.startViewTransition(() => flushSync(() => setScreen(next)));
+    } else {
+      setEnter(motion ? dir : "");
+      setScreen(next);
+    }
+  }, []);
+
+  useEffect(() => {
+    history.replaceState({ ...history.state, rv: restored ? "thanks" : "rate" }, "");
+    const onPop = (e: PopStateEvent) => show((e.state?.rv as Screen) ?? "rate", { back: true });
+    // Coming back from Google with the back button shows the thank-you as it was left.
+    const onShow = (e: PageTransitionEvent) => e.persisted && setCopied(false);
+    window.addEventListener("popstate", onPop);
+    window.addEventListener("pageshow", onShow);
+    return () => {
+      window.removeEventListener("popstate", onPop);
+      window.removeEventListener("pageshow", onShow);
+      clearTimeout(advance.current);
+      request.current?.abort();
+    };
+  }, [show, restored]);
+
+  function choose(n: number, go: boolean) {
     latest.current = n;
     setRating(n);
     setBurst((b) => b + 1);
     try {
       navigator.vibrate?.(n === 5 ? [10, 50, 14] : 10);
     } catch {}
+    clearTimeout(advance.current);
+    if (!go) return;
+    if (n >= 4 && business.hasGoogleLink) loadWords(n);
+    advance.current = setTimeout(() => {
+      flush();
+      show(n >= 4 && business.hasGoogleLink ? "picks" : "note", { push: true });
+    }, ADVANCE_MS);
   }
 
   function pickLang(next: Lang) {
@@ -124,192 +206,316 @@ export function ReviewFlow({ business, source, preview = false }: Props) {
   function onKey(e: React.KeyboardEvent) {
     if (e.key === "ArrowRight" || e.key === "ArrowUp") {
       e.preventDefault();
-      choose(Math.min(5, (rating || 0) + 1));
+      choose(Math.min(5, (rating || 0) + 1), false);
     } else if (e.key === "ArrowLeft" || e.key === "ArrowDown") {
       e.preventDefault();
-      choose(Math.max(1, (rating || 2) - 1));
+      choose(Math.max(1, (rating || 2) - 1), false);
     }
   }
 
+  function toggle(key: string) {
+    setNeedPick(false);
+    setPicks((now) => (now.includes(key) ? now.filter((k) => k !== key) : now.length < MAX_PICKS ? [...now, key] : now));
+  }
+
+  const wordsFor = `${lang}:${rating <= 3 ? "low" : "high"}`;
+  const tapped = (kind: "g" | "b") => {
+    const list = (kind === "g" ? words?.good : words?.bad) ?? [];
+    return words?.key === wordsFor ? picks.filter((p) => p[0] === kind).map((p) => list[Number(p.slice(1))]).filter(Boolean) : [];
+  };
+
+  // Asks for the words once per language and rating band; a newer ask wins.
+  function loadWords(stars: number) {
+    const key = `${lang}:${stars <= 3 ? "low" : "high"}`;
+    if (words?.key === key || wordsRequest.current === key) return;
+    wordsRequest.current = key;
+    fetch("/api/review-picks", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ slug: business.slug, rating: stars, lang }),
+    })
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
+      .then((data: { picks: { good: string[]; bad: string[] } }) => {
+        if (wordsRequest.current !== key) return;
+        setPicks([]);
+        setWords({ key, ...data.picks });
+      })
+      .catch(() => {
+        if (wordsRequest.current === key) wordsRequest.current = "";
+      });
+  }
+
+  async function write(again = false) {
+    const good = tapped("g");
+    const bad = happy ? [] : tapped("b");
+    if (!good.length && !bad.length && !extra.trim()) {
+      setNeedPick(true);
+      return;
+    }
+    request.current?.abort();
+    const controller = new AbortController();
+    request.current = controller;
+    setBusy(true);
+    setFailed(false);
+    setCopyFailed(false);
+    if (!again) show("drafts", { push: true });
+    try {
+      const res = await fetch("/api/review-drafts", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ slug: business.slug, rating, picks: good, issues: bad, note: extra.trim(), lang }),
+        signal: controller.signal,
+      });
+      if (!res.ok) throw new Error(String(res.status));
+      const data: { drafts: { veryShort: string; short: string; medium: string }; ai: boolean } = await res.json();
+      setDrafts((d) => ({ texts: [data.drafts.veryShort, data.drafts.short, data.drafts.medium], ai: data.ai, rating, round: (d?.round ?? 0) + 1 }));
+      setChosen(1);
+    } catch (err) {
+      if ((err as Error).name !== "AbortError") setFailed(true);
+    } finally {
+      if (request.current === controller) setBusy(false);
+    }
+  }
+
+  function edit(text: string) {
+    setDrafts((d) => (d ? { ...d, texts: d.texts.map((x, i) => (i === chosen ? text : x)) as Drafts["texts"] } : d));
+  }
+
+  // The copy happens inside the tap (phones only allow it there). The thank-you is put in place
+  // behind, so coming back from Google lands on it, and Google opens a beat later.
+  async function copyAndOpen() {
+    const text = drafts?.texts[chosen]?.trim();
+    if (!text) return;
+    let ok = false;
+    try {
+      await navigator.clipboard.writeText(text);
+      ok = true;
+    } catch {
+      ok = legacyCopy(text);
+    }
+    if (!ok) {
+      setCopyFailed(true);
+      return;
+    }
+    try {
+      navigator.vibrate?.(12);
+    } catch {}
+    flush();
+    setCopied(true);
+    try {
+      sessionStorage.setItem(doneKey, JSON.stringify({ at: Date.now(), text, rating }));
+    } catch {}
+    setTimeout(() => {
+      setThanks("google");
+      setScreen("thanks");
+      history.replaceState({ ...history.state, rv: "thanks" }, "");
+      // A full page load on purpose: /go counts the tap and redirects off-site to Google.
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+      window.location.assign(googleHref);
+    }, 750);
+  }
+
+  function noteSent() {
+    setThanks("note");
+    show("thanks");
+    history.replaceState({ ...history.state, rv: "thanks" }, "");
+  }
+
+  const back = () => history.back();
   const shown = hover || rating;
-  const rtl = lang === "ur";
-  const googleHref = `${business.base ?? `/r/${business.slug}`}/go?s=${source}`;
+  const bar = (step: number, of: number) => <StepBar t={t} step={step} of={of} rating={rating} rtl={rtl} onBack={back} />;
 
   return (
     <div
       ref={root}
-      className={`flex flex-1 flex-col ${business.intro ? "rv-with-intro" : ""} ${rtl ? "font-urdu" : ""}`}
+      className={`relative isolate flex flex-1 flex-col ${business.intro ? "rv-with-intro" : ""} ${rtl ? "font-urdu" : ""}`}
       dir={rtl ? "rtl" : "ltr"}
       lang={lang === "ur" ? "ur" : lang === "roman" ? "ur-Latn" : "en"}
+      style={{ "--rv-glow": screen === "thanks" ? 1 : rating / 5 } as React.CSSProperties}
     >
-      <div className="rv-in flex items-center justify-end gap-2" style={{ "--d": "0ms" } as React.CSSProperties} dir="ltr">
-        <div className="flex gap-1 rounded-full border border-(--rv-line) p-1" role="group" aria-label="Language">
-          {LANGS.map((l) => (
-            <button
-              key={l}
-              type="button"
-              onClick={() => pickLang(l)}
-              aria-pressed={lang === l}
-              className={`min-h-9 rounded-full px-3 text-[13px] transition-colors duration-200 ${l === "ur" ? "font-urdu" : ""} ${
-                lang === l ? "bg-(--rv-fg) text-(--rv-bg)" : "text-(--rv-fg3) hover:text-(--rv-fg)"
-              }`}
-            >
-              {LANG_NAMES[l]}
-            </button>
-          ))}
-        </div>
-        <button
-          type="button"
-          onClick={toggleTheme}
-          className="grid size-11 place-items-center rounded-full border border-(--rv-line) text-(--rv-fg2) transition-colors hover:text-(--rv-fg)"
-          aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-          aria-pressed={theme === "dark"}
-        >
-          {theme === "dark" ? (
-            <Sun aria-hidden="true" className="size-4" strokeWidth={1.9} />
-          ) : (
-            <Moon aria-hidden="true" className="size-4" strokeWidth={1.9} />
-          )}
-        </button>
-      </div>
+      {/* The warm light the glass floats over; it brightens with the stars. */}
+      <div className="rv-ambient" aria-hidden="true" />
 
-      <div className="rv-layout">
-        {/* Who the customer is thanking, large: on wide screens it holds the left half. */}
-        <h1
-          className="rv-head rv-in"
-          style={
-            {
-              "--d": "60ms",
-              "--len": Math.max(business.name.length + t.thanks.length, 30),
-            } as React.CSSProperties
-          }
-        >
-          <span className="rv-thanks">{t.thanks} </span>
-          <span className="rv-name">{business.name}</span>
-        </h1>
-
-        <section className="rv-panel" aria-labelledby="rv-question">
-          <h2 id="rv-question" className={`rv-question rv-in ${rtl ? "leading-loose" : ""}`} style={{ "--d": "160ms" } as React.CSSProperties}>
-            {t.question}
-          </h2>
-
-          {/* Stars */}
-          <div className="relative mt-8" dir="ltr">
-            <div
-              role="radiogroup"
-              aria-label={t.question}
-              className="relative flex justify-between gap-1"
-              onMouseLeave={() => setHover(0)}
-              onKeyDown={onKey}
-            >
-              {[1, 2, 3, 4, 5].map((n) => {
-                const on = n <= shown;
-                return (
+      <div key={screen} className={`rv-screen flex flex-1 flex-col ${enter ? `rv-enter-${enter}` : ""} ${screen === "rate" ? "" : "rv-step"}`}>
+        {screen === "rate" && (
+          <>
+            <div className="rv-in flex items-center justify-end gap-2" style={{ "--d": "0ms" } as React.CSSProperties} dir="ltr">
+              <div className="rv-glass flex gap-1 rounded-full p-1" role="group" aria-label="Language">
+                {LANGS.map((l) => (
                   <button
-                    key={n}
+                    key={l}
                     type="button"
-                    role="radio"
-                    aria-checked={rating === n}
-                    aria-label={`${t.starName(n)}: ${t.labels[n - 1]}`}
-                    tabIndex={rating ? (rating === n ? 0 : -1) : n === 1 ? 0 : -1}
-                    onClick={() => choose(n)}
-                    onMouseEnter={() => setHover(n)}
-                    className={`rv-star rv-in ${on ? "is-on" : ""} ${rating && n <= rating ? "is-set" : ""} ${hover && !rating ? "is-preview" : ""}`}
-                    style={
-                      {
-                        "--d": `${220 + n * 60}ms`,
-                        "--k": `${(n - 1) * 45}ms`,
-                      } as React.CSSProperties
-                    }
+                    onClick={() => pickLang(l)}
+                    aria-pressed={lang === l}
+                    className={`min-h-9 rounded-full px-3 text-[13px] transition-colors duration-200 ${l === "ur" ? "font-urdu" : ""} ${
+                      lang === l ? "bg-(--rv-fg) text-(--rv-bg)" : "text-(--rv-fg3) hover:text-(--rv-fg)"
+                    }`}
                   >
-                    <svg viewBox="0 0 24 24" aria-hidden="true">
-                      <path d="M12 2.6l2.9 6 6.5.8-4.8 4.5 1.2 6.5L12 17.3l-5.8 3.1 1.2-6.5L2.6 9.4l6.5-.8z" />
-                    </svg>
-                    {rating === n && (
-                      <span key={burst} aria-hidden="true">
-                        <span className="rv-ring" />
-                        {n === 5 &&
-                          SPARKS.map((s, i) => (
-                            <span
-                              key={i}
-                              className="rv-spark"
-                              style={
-                                {
-                                  "--x": `${s.x}px`,
-                                  "--y": `${s.y}px`,
-                                  "--s": `${s.s}px`,
-                                  "--sd": `${i * 12}ms`,
-                                } as React.CSSProperties
-                              }
-                            />
-                          ))}
-                      </span>
-                    )}
+                    {LANG_NAMES[l]}
                   </button>
-                );
-              })}
+                ))}
+              </div>
+              <button
+                type="button"
+                onClick={toggleTheme}
+                className="rv-glass grid size-11 place-items-center rounded-full text-(--rv-fg2) transition-colors hover:text-(--rv-fg)"
+                aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+                aria-pressed={theme === "dark"}
+              >
+                {theme === "dark" ? <Sun aria-hidden="true" className="size-4" strokeWidth={1.9} /> : <Moon aria-hidden="true" className="size-4" strokeWidth={1.9} />}
+              </button>
             </div>
-          </div>
 
-          <p className={`mt-4 min-h-8 text-center ${rtl ? "text-xl" : "text-lg"}`} aria-live="polite">
-            <span key={`${lang}-${shown}`} className={`rv-word inline-block ${shown ? "font-medium text-(--rv-word)" : "text-(--rv-fg3)"}`}>
-              {shown ? t.labels[shown - 1] : t.hint}
-            </span>
-          </p>
+            <div className="rv-layout">
+              {/* Who the customer is thanking, large: on wide screens it holds the left half. */}
+              <h1 className="rv-head rv-in" style={{ "--d": "60ms", "--len": Math.max(business.name.length + t.thanks.length, 30) } as React.CSSProperties}>
+                <span className="rv-thanks">{t.thanks} </span>
+                <span className="rv-name">{business.name}</span>
+              </h1>
 
-          {/* Straight to Google, for people who don't want to rate here first. */}
-          {!rating && business.hasGoogleLink && (
-            <a
-              href={googleHref}
-              className="rv-in mx-auto mt-6 inline-flex min-h-11 items-center gap-1.5 text-sm text-(--rv-fg3) underline-offset-4 hover:text-(--rv-fg) hover:underline"
-              style={{ "--d": "700ms" } as React.CSSProperties}
-            >
-              {t.skip}
-              <ArrowRight aria-hidden="true" className={`size-4 ${rtl ? "rotate-180" : ""}`} strokeWidth={1.75} />
-            </a>
-          )}
+              <section className="rv-panel" aria-labelledby="rv-question">
+                <h2 id="rv-question" className={`rv-question rv-in ${rtl ? "leading-loose" : ""}`} style={{ "--d": "160ms" } as React.CSSProperties}>
+                  {t.question}
+                </h2>
 
-          {/* The next step, for every rating */}
-          <div className={`rv-reveal ${rating ? "is-open" : ""}`} aria-hidden={!rating}>
-            <div className="rv-reveal-inner">
-              <p className={`mt-8 text-(--rv-fg2) ${rtl ? "text-lg leading-loose" : "text-[1.05rem] leading-relaxed"}`}>
-                {business.hasGoogleLink ? (rating >= 4 ? t.happy : t.unhappy) : t.noGoogle}
-              </p>
-              {business.hasGoogleLink && (
-                <>
+                <div className="relative mt-8" dir="ltr">
+                  <div role="radiogroup" aria-label={t.question} className="relative flex justify-between gap-1" onMouseLeave={() => setHover(0)} onKeyDown={onKey}>
+                    {[1, 2, 3, 4, 5].map((n) => {
+                      const on = n <= shown;
+                      return (
+                        <button
+                          key={n}
+                          type="button"
+                          role="radio"
+                          aria-checked={rating === n}
+                          aria-label={`${t.starName(n)}: ${t.labels[n - 1]}`}
+                          tabIndex={rating ? (rating === n ? 0 : -1) : n === 1 ? 0 : -1}
+                          onClick={() => choose(n, true)}
+                          onMouseEnter={() => setHover(n)}
+                          className={`rv-star rv-in ${on ? "is-on" : ""} ${rating && n <= rating ? "is-set" : ""} ${hover && !rating ? "is-preview" : ""}`}
+                          style={{ "--d": `${220 + n * 60}ms`, "--k": `${(n - 1) * 45}ms` } as React.CSSProperties}
+                        >
+                          <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M12 2.6l2.9 6 6.5.8-4.8 4.5 1.2 6.5L12 17.3l-5.8 3.1 1.2-6.5L2.6 9.4l6.5-.8z" />
+                          </svg>
+                          {rating === n && (
+                            <span key={burst} aria-hidden="true">
+                              <span className="rv-ring" />
+                              {n === 5 &&
+                                SPARKS.map((s, i) => (
+                                  <span
+                                    key={i}
+                                    className="rv-spark"
+                                    style={{ "--x": `${s.x}px`, "--y": `${s.y}px`, "--s": `${s.s}px`, "--sd": `${i * 12}ms` } as React.CSSProperties}
+                                  />
+                                ))}
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <p className={`mt-4 min-h-8 text-center ${rtl ? "text-xl" : "text-lg"}`} aria-live="polite">
+                  <span key={`${lang}-${shown}`} className={`rv-word inline-block ${shown ? "font-medium text-(--rv-word)" : "text-(--rv-fg3)"}`}>
+                    {shown ? t.labels[shown - 1] : t.hint}
+                  </span>
+                </p>
+
+                {/* Straight to Google, for people who don't want to rate here first. */}
+                {business.hasGoogleLink && (
                   <a
                     href={googleHref}
-                    tabIndex={rating ? 0 : -1}
-                    onClick={() => {
-                      flush();
-                      setLeaving(true);
-                    }}
-                    className="rv-google btn btn-gold mt-6 min-h-14 w-full text-[1.05rem]"
+                    className="rv-in mx-auto mt-6 flex min-h-11 w-fit items-center gap-1.5 text-sm text-(--rv-fg3) underline-offset-4 hover:text-(--rv-fg) hover:underline"
+                    style={{ "--d": "700ms" } as React.CSSProperties}
                   >
-                    <GoogleMark />
-                    <span>{leaving ? t.opening : t.google}</span>
-                    <ArrowRight aria-hidden="true" className={`rv-arrow size-5 ${rtl ? "rotate-180" : ""}`} strokeWidth={2} />
+                    {t.skip}
+                    <ArrowRight aria-hidden="true" className={`size-4 ${rtl ? "rotate-180" : ""}`} strokeWidth={1.75} />
                   </a>
-                  <p className="mt-2 text-center text-xs text-(--rv-fg3)">{t.googleNote(rating || 5)}</p>
-                </>
-              )}
-              <PrivateFeedback slug={business.slug} source={source} copy={t} active={Boolean(rating)} onOpen={flush} />
+                )}
+              </section>
             </div>
-          </div>
-        </section>
+          </>
+        )}
+
+        {screen === "picks" && (
+          <PicksStep
+            t={t}
+            rtl={rtl}
+            low={!happy}
+            chips={wordsFor === words?.key ? words.good : null}
+            issues={wordsFor === words?.key ? words.bad : null}
+            picks={picks}
+            extra={extra}
+            needPick={needPick}
+            onToggle={toggle}
+            onExtra={(v) => {
+              setExtra(v);
+              setNeedPick(false);
+            }}
+            onWrite={() => write()}
+            bar={bar(2, 3)}
+          />
+        )}
+
+        {screen === "drafts" && (
+          <DraftsStep
+            t={t}
+            rtl={rtl}
+            rating={rating}
+            drafts={drafts}
+            busy={busy}
+            failed={failed}
+            chosen={chosen}
+            copied={copied}
+            copyFailed={copyFailed}
+            googleHref={googleHref}
+            onChoose={(i) => {
+              setChosen(i);
+              setCopyFailed(false);
+            }}
+            onEdit={edit}
+            onAgain={() => write(true)}
+            onCopy={copyAndOpen}
+            onLeave={flush}
+            bar={bar(3, 3)}
+          />
+        )}
+
+        {screen === "note" && (
+          <NoteStep
+            t={t}
+            rtl={rtl}
+            rating={rating}
+            noGoogle={!business.hasGoogleLink}
+            slug={business.slug}
+            source={source}
+            showGoogle={business.hasGoogleLink}
+            onSent={noteSent}
+            onGoogle={() => {
+              loadWords(rating);
+              show("picks", { push: true });
+            }}
+            bar={bar(2, 2)}
+          />
+        )}
+
+        {screen === "thanks" && (
+          <ThanksStep
+            t={t}
+            rtl={rtl}
+            kind={thanks}
+            name={business.name}
+            onAgain={() => {
+              const text = drafts?.texts[chosen]?.trim() || restored?.text;
+              if (text) navigator.clipboard?.writeText(text).catch(() => legacyCopy(text));
+              // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+              window.location.assign(googleHref);
+            }}
+          />
+        )}
       </div>
     </div>
-  );
-}
-
-// Google's "G", drawn in the button's ink so it reads as a destination, not a logo sticker.
-function GoogleMark() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className="size-5 shrink-0">
-      <path
-        fill="currentColor"
-        d="M21.6 12.23c0-.68-.06-1.34-.17-1.97H12v3.73h5.39a4.6 4.6 0 0 1-2 3.02v2.5h3.24c1.9-1.75 2.97-4.32 2.97-7.28zM12 22c2.7 0 4.97-.9 6.63-2.43l-3.24-2.51c-.9.6-2.04.96-3.39.96-2.6 0-4.81-1.76-5.6-4.12H3.06v2.59A10 10 0 0 0 12 22zm-5.6-8.1a6 6 0 0 1 0-3.8V7.51H3.06a10 10 0 0 0 0 8.98L6.4 13.9zM12 5.98c1.47 0 2.79.5 3.83 1.5l2.87-2.87A9.6 9.6 0 0 0 12 2a10 10 0 0 0-8.94 5.51L6.4 10.1C7.19 7.74 9.4 5.98 12 5.98z"
-      />
-    </svg>
   );
 }

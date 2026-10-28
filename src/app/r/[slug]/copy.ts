@@ -12,19 +12,39 @@ export type Copy = {
   hint: string;
   labels: [string, string, string, string, string];
   starName: (n: number) => string;
-  happy: string;
-  unhappy: string;
-  google: string;
-  // Google's own review box can't be opened with stars already filled in, so the customer is
-  // told exactly what to tap there: the same number they just chose.
-  googleNote: (stars: number) => string;
-  opening: string;
   skip: string;
-  private: string;
-  form: { message: string; name: string; phone: string; optional: string; send: string; sending: string; only: string; cancel: string };
-  sent: string;
-  sentNote: string;
+  form: { message: string; name: string; phone: string; optional: string; send: string; sending: string; only: string };
   noGoogle: string;
+  // Writing the Google review: the customer taps what stood out and we write it up three ways.
+  write: {
+    title: string;
+    hint: string;
+    issues: string;
+    extra: string;
+    go: string;
+    need: string;
+    writing: string;
+    failed: string;
+    retry: string;
+    title2: string;
+    hint2: string;
+    versions: [string, string, string];
+    again: string;
+    edit: string;
+    copyOpen: string;
+    copied: string;
+    copyFailed: string;
+    openOnly: string;
+    paste: (stars: number) => string;
+    back: string;
+    editHint: string;
+    extraPh: string;
+  };
+  // The private note's step, and the quieter way to Google under it (1 to 3 stars).
+  note: { title: string; title3: string; titleHappy: string; orGoogle: string; googleLink: string; reply: string; need: string };
+  // The last step.
+  done: { title: string; google: (name: string) => string; note: string; again: string };
+  stepOf: (step: number, of: number) => string;
 };
 
 export const COPY: Record<Lang, Copy> = {
@@ -34,13 +54,7 @@ export const COPY: Record<Lang, Copy> = {
     hint: "Tap a star",
     labels: ["Bad", "Not good", "Okay", "Good", "Excellent"],
     starName: (n) => `${n} ${n === 1 ? "star" : "stars"}`,
-    happy: "Thank you! Would you say that on Google? It takes about 30 seconds and helps other people find us.",
-    unhappy: "Thank you for being honest. Tell the owner what went wrong, or share your review on Google.",
-    google: "Post it on Google",
-    googleNote: (n) => `Google opens its own review box: tap ${n} ${n === 1 ? "star" : "stars"} there again, then write a line.`,
-    opening: "Opening Google…",
     skip: "Go straight to Google",
-    private: "Tell the owner privately",
     form: {
       message: "What should the owner know?",
       name: "Your name",
@@ -49,11 +63,35 @@ export const COPY: Record<Lang, Copy> = {
       send: "Send to the owner",
       sending: "Sending…",
       only: "Only the owner sees this. It is not posted anywhere.",
-      cancel: "Cancel",
     },
-    sent: "Sent to the owner",
-    sentNote: "Thank you. Your note went straight to the owner, and nobody else sees it.",
     noGoogle: "Our Google review link is being set up. Meanwhile, you can send the owner a note.",
+    write: {
+      title: "What stood out?",
+      hint: "Pick up to 3. We’ll write it up in your words.",
+      issues: "Could be better",
+      extra: "Anything else to add?",
+      go: "Write my review",
+      need: "Pick at least one, or add a line.",
+      writing: "Writing your review…",
+      failed: "That didn’t go through. Check your internet and try again.",
+      retry: "Try again",
+      title2: "Your review, three ways",
+      hint2: "Pick one and change anything you like.",
+      versions: ["Very short", "Short", "A bit longer"],
+      again: "Write again",
+      edit: "Your review",
+      copyOpen: "Copy & open Google",
+      copied: "Copied. Opening Google…",
+      copyFailed: "Couldn’t copy it. Press and hold the text to copy it, then open Google.",
+      openOnly: "Open Google",
+      paste: (n) => `In Google, tap ${n} ${n === 1 ? "star" : "stars"}, then hold the box and choose Paste.`,
+      back: "Back",
+      editHint: "Tap the text to change anything",
+      extraPh: "e.g. Loved the welcome",
+    },
+    note: { title: "What went wrong?", title3: "What could be better?", titleHappy: "Send the owner a note", orGoogle: "Rather post it on Google?", googleLink: "Write a Google review", reply: "Want a reply? Add your name and phone", need: "Write a few words first, so the owner knows what happened." },
+    done: { title: "Thank you!", google: (name) => `Your review helps others find ${name}.`, note: "We got your message. We’ll look into it soon.", again: "Copy again & open Google" },
+    stepOf: (a, b) => `Step ${a} of ${b}`,
   },
   roman: {
     thanks: "Aane ka shukriya",
@@ -61,13 +99,7 @@ export const COPY: Record<Lang, Copy> = {
     hint: "Star par tap karein",
     labels: ["Bura", "Theek nahin", "Theek tha", "Acha", "Bohat acha"],
     starName: (n) => `${n} star`,
-    happy: "Shukriya! Kya aap Google par bhi bata denge? Sirf 30 second lagte hain aur doosron ko hamein dhoondne mein madad milti hai.",
-    unhappy: "Sach batane ka shukriya. Owner ko batayein kya ghalat hua, ya Google par apna review dein.",
-    google: "Google par review dein",
-    googleNote: (n) => `Google apna review box kholega: wahan dobara ${n} star dabayein, phir ek line likhein.`,
-    opening: "Google khul raha hai…",
     skip: "Seedha Google par jayein",
-    private: "Owner ko privately batayein",
     form: {
       message: "Owner ko kya batana chahte hain?",
       name: "Aap ka naam",
@@ -76,25 +108,43 @@ export const COPY: Record<Lang, Copy> = {
       send: "Owner ko bhejein",
       sending: "Bhej rahe hain…",
       only: "Yeh sirf owner dekhega. Kahin post nahin hota.",
-      cancel: "Wapis",
     },
-    sent: "Owner ko bhej diya",
-    sentNote: "Shukriya. Aap ka message seedha owner tak pohanch gaya, aur koi aur nahin dekhega.",
     noGoogle: "Hamara Google review link abhi set ho raha hai. Tab tak aap owner ko message bhej sakte hain.",
+    write: {
+      title: "Kya khaas laga?",
+      hint: "3 tak chunein. Hum aap ke alfaaz mein likh denge.",
+      issues: "Behtar ho sakta tha",
+      extra: "Kuch aur batana chahenge?",
+      go: "Mera review likhein",
+      need: "Kam az kam ek chunein, ya ek line likhein.",
+      writing: "Aap ka review likh rahe hain…",
+      failed: "Nahin ho saka. Internet check kar ke dobara koshish karein.",
+      retry: "Dobara koshish karein",
+      title2: "Aap ka review, teen tarah se",
+      hint2: "Ek chunein, jo chahein badal dein.",
+      versions: ["Bohat chhota", "Chhota", "Thora lamba"],
+      again: "Dobara likhein",
+      edit: "Aap ka review",
+      copyOpen: "Copy karein aur Google kholein",
+      copied: "Copy ho gaya. Google khul raha hai…",
+      copyFailed: "Copy nahin hua. Text ko daba kar rakhein aur copy karein, phir Google kholein.",
+      openOnly: "Google kholein",
+      paste: (n) => `Google mein ${n} star dabayein, phir box daba kar Paste karein.`,
+      back: "Wapis",
+      editHint: "Text par tap kar ke jo chahein badlein",
+      extraPh: "Jaise: welcome bohat acha tha",
+    },
+    note: { title: "Kya ghalat hua?", title3: "Kya behtar ho sakta tha?", titleHappy: "Owner ko message bhejein", orGoogle: "Google par likhna chahte hain?", googleLink: "Google review dein", reply: "Jawab chahiye? Apna naam aur phone dein", need: "Pehle kuch alfaaz likhein, taake owner ko pata chale kya hua." },
+    done: { title: "Shukriya!", google: (name) => `Aap ka review doosron ko ${name} tak layega.`, note: "Aap ki baat humein mil gayi. Hum is par jald ghaur karenge.", again: "Dobara copy karein aur Google kholein" },
+    stepOf: (a, b) => `Step ${a} / ${b}`,
   },
   ur: {
     thanks: "آنے کا شکریہ",
-    question: "آپ کا وزٹ کیسا رہا؟",
-    hint: "ستارے پر ٹیپ کریں",
+    question: "آپ کا تجربہ کیسا رہا؟",
+    hint: "کسی ستارے کو دبائیں",
     labels: ["برا", "ٹھیک نہیں", "ٹھیک تھا", "اچھا", "بہت اچھا"],
     starName: (n) => `${n} ستارے`,
-    happy: "شکریہ! کیا آپ گوگل پر بھی بتا دیں گے؟ صرف تیس سیکنڈ لگتے ہیں اور دوسروں کو ہمیں ڈھونڈنے میں مدد ملتی ہے۔",
-    unhappy: "سچ بتانے کا شکریہ۔ مالک کو بتائیں کہ کیا غلط ہوا، یا گوگل پر اپنا ریویو دیں۔",
-    google: "گوگل پر ریویو دیں",
-    googleNote: (n) => `گوگل اپنا ریویو باکس کھولے گا: وہاں دوبارہ ${n} ستارے دبائیں، پھر ایک سطر لکھیں۔`,
-    opening: "گوگل کھل رہا ہے…",
     skip: "سیدھا گوگل پر جائیں",
-    private: "مالک کو نجی طور پر بتائیں",
     form: {
       message: "آپ مالک کو کیا بتانا چاہتے ہیں؟",
       name: "آپ کا نام",
@@ -103,10 +153,34 @@ export const COPY: Record<Lang, Copy> = {
       send: "مالک کو بھیجیں",
       sending: "بھیج رہے ہیں…",
       only: "یہ صرف مالک دیکھے گا۔ کہیں پوسٹ نہیں ہوتا۔",
-      cancel: "واپس",
     },
-    sent: "مالک کو بھیج دیا",
-    sentNote: "شکریہ۔ آپ کا پیغام سیدھا مالک تک پہنچ گیا، اور کوئی اور نہیں دیکھے گا۔",
     noGoogle: "ہمارا گوگل ریویو لنک ابھی تیار ہو رہا ہے۔ تب تک آپ مالک کو پیغام بھیج سکتے ہیں۔",
+    write: {
+      title: "کیا خاص لگا؟",
+      hint: "تین تک چنیں۔ ہم آپ کے الفاظ میں لکھ دیں گے۔",
+      issues: "بہتر ہو سکتا تھا",
+      extra: "کچھ اور بتانا چاہیں گے؟",
+      go: "میرا ریویو لکھیں",
+      need: "کم از کم ایک چنیں، یا ایک سطر لکھیں۔",
+      writing: "آپ کا ریویو لکھ رہے ہیں…",
+      failed: "نہیں ہو سکا۔ انٹرنیٹ چیک کر کے دوبارہ کوشش کریں۔",
+      retry: "دوبارہ کوشش کریں",
+      title2: "آپ کا ریویو، تین طرح سے",
+      hint2: "ایک چنیں، جو چاہیں بدل دیں۔",
+      versions: ["بہت مختصر", "مختصر", "تھوڑا لمبا"],
+      again: "دوبارہ لکھیں",
+      edit: "آپ کا ریویو",
+      copyOpen: "کاپی کریں اور گوگل کھولیں",
+      copied: "کاپی ہو گیا۔ گوگل کھل رہا ہے…",
+      copyFailed: "کاپی نہیں ہوا۔ متن کو دبا کر رکھیں اور کاپی کریں، پھر گوگل کھولیں۔",
+      openOnly: "گوگل کھولیں",
+      paste: (n) => `گوگل میں ${n} ستارے دبائیں، پھر خانے کو دبا کر رکھیں اور Paste چنیں۔`,
+      back: "واپس",
+      editHint: "متن کو چھو کر جو چاہیں بدلیں",
+      extraPh: "جیسے: استقبال بہت اچھا تھا",
+    },
+    note: { title: "کیا غلط ہوا؟", title3: "کیا بہتر ہو سکتا تھا؟", titleHappy: "مالک کو پیغام بھیجیں", orGoogle: "گوگل پر لکھنا چاہتے ہیں؟", googleLink: "گوگل ریویو دیں", reply: "جواب چاہیے؟ اپنا نام اور فون دیں", need: "پہلے چند الفاظ لکھیں، تاکہ مالک کو معلوم ہو کیا ہوا۔" },
+    done: { title: "شکریہ!", google: (name) => `آپ کا ریویو دوسروں کو ${name} تک لائے گا۔`, note: "آپ کی بات ہمیں مل گئی۔ ہم اس پر جلد غور کریں گے۔", again: "دوبارہ کاپی کریں اور گوگل کھولیں" },
+    stepOf: (a, b) => `مرحلہ ${a} از ${b}`,
   },
 };
