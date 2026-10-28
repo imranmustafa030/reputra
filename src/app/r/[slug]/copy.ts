@@ -12,22 +12,9 @@ export type Copy = {
   hint: string;
   labels: [string, string, string, string, string];
   starName: (n: number) => string;
-  happy: string;
-  unhappy: string;
-  google: string;
-  // Google's own review box can't be opened with stars already filled in, so the customer is
-  // told exactly what to tap there: the same number they just chose.
-  googleNote: (stars: number) => string;
-  opening: string;
   skip: string;
-  private: string;
-  form: { message: string; name: string; phone: string; optional: string; send: string; sending: string; only: string; cancel: string };
-  sent: string;
-  sentNote: string;
+  form: { message: string; name: string; phone: string; optional: string; send: string; sending: string; only: string };
   noGoogle: string;
-  // The two ways on, shown the same way for every rating.
-  chooseGoogleSub: string;
-  privateSub: string;
   // Writing the Google review: the customer taps what stood out and we write it up three ways.
   write: {
     title: string;
@@ -48,10 +35,15 @@ export type Copy = {
     copied: string;
     copyFailed: string;
     openOnly: string;
-    own: string;
     paste: (stars: number) => string;
     back: string;
+    editHint: string;
   };
+  // The private note's step, and the quieter way to Google under it (1 to 3 stars).
+  note: { title: string; titleHappy: string; orGoogle: string; googleLink: string };
+  // The last step.
+  done: { title: string; google: (name: string) => string; note: string; again: string };
+  stepOf: (step: number, of: number) => string;
 };
 
 export const COPY: Record<Lang, Copy> = {
@@ -61,13 +53,7 @@ export const COPY: Record<Lang, Copy> = {
     hint: "Tap a star",
     labels: ["Bad", "Not good", "Okay", "Good", "Excellent"],
     starName: (n) => `${n} ${n === 1 ? "star" : "stars"}`,
-    happy: "Thank you! Would you say that on Google? It takes about 30 seconds and helps other people find us.",
-    unhappy: "Thank you for being honest. Tell the owner what went wrong, or share your review on Google.",
-    google: "Post it on Google",
-    googleNote: (n) => `Google opens its own review box: tap ${n} ${n === 1 ? "star" : "stars"} there again, then write a line.`,
-    opening: "Opening Google…",
     skip: "Go straight to Google",
-    private: "Tell the owner privately",
     form: {
       message: "What should the owner know?",
       name: "Your name",
@@ -76,13 +62,8 @@ export const COPY: Record<Lang, Copy> = {
       send: "Send to the owner",
       sending: "Sending…",
       only: "Only the owner sees this. It is not posted anywhere.",
-      cancel: "Cancel",
     },
-    sent: "Sent to the owner",
-    sentNote: "Thank you. Your note went straight to the owner, and nobody else sees it.",
     noGoogle: "Our Google review link is being set up. Meanwhile, you can send the owner a note.",
-    chooseGoogleSub: "We’ll help you put it into words",
-    privateSub: "Only the owner reads it",
     write: {
       title: "What stood out?",
       hint: "Pick up to 3. We’ll write it up in your words.",
@@ -102,10 +83,13 @@ export const COPY: Record<Lang, Copy> = {
       copied: "Copied. Opening Google…",
       copyFailed: "Couldn’t copy it. Press and hold the text to copy it, then open Google.",
       openOnly: "Open Google",
-      own: "I’ll write my own",
-      paste: (n) => `In Google, tap ${n} ${n === 1 ? "star" : "stars"}, then press and hold the box and choose Paste.`,
+      paste: (n) => `In Google, tap ${n} ${n === 1 ? "star" : "stars"}, then hold the box and choose Paste.`,
       back: "Back",
+      editHint: "Tap the text to change anything",
     },
+    note: { title: "What went wrong?", titleHappy: "Send the owner a note", orGoogle: "Rather post it on Google?", googleLink: "Write a Google review" },
+    done: { title: "Thank you!", google: (name) => `Your review helps other people find ${name}. It means a lot.`, note: "Your note went straight to the owner. Nobody else sees it.", again: "Copy again & open Google" },
+    stepOf: (a, b) => `Step ${a} of ${b}`,
   },
   roman: {
     thanks: "Aane ka shukriya",
@@ -113,13 +97,7 @@ export const COPY: Record<Lang, Copy> = {
     hint: "Star par tap karein",
     labels: ["Bura", "Theek nahin", "Theek tha", "Acha", "Bohat acha"],
     starName: (n) => `${n} star`,
-    happy: "Shukriya! Kya aap Google par bhi bata denge? Sirf 30 second lagte hain aur doosron ko hamein dhoondne mein madad milti hai.",
-    unhappy: "Sach batane ka shukriya. Owner ko batayein kya ghalat hua, ya Google par apna review dein.",
-    google: "Google par review dein",
-    googleNote: (n) => `Google apna review box kholega: wahan dobara ${n} star dabayein, phir ek line likhein.`,
-    opening: "Google khul raha hai…",
     skip: "Seedha Google par jayein",
-    private: "Owner ko privately batayein",
     form: {
       message: "Owner ko kya batana chahte hain?",
       name: "Aap ka naam",
@@ -128,13 +106,8 @@ export const COPY: Record<Lang, Copy> = {
       send: "Owner ko bhejein",
       sending: "Bhej rahe hain…",
       only: "Yeh sirf owner dekhega. Kahin post nahin hota.",
-      cancel: "Wapis",
     },
-    sent: "Owner ko bhej diya",
-    sentNote: "Shukriya. Aap ka message seedha owner tak pohanch gaya, aur koi aur nahin dekhega.",
     noGoogle: "Hamara Google review link abhi set ho raha hai. Tab tak aap owner ko message bhej sakte hain.",
-    chooseGoogleSub: "Likhne mein hum madad karenge",
-    privateSub: "Sirf owner parhega",
     write: {
       title: "Kya khaas laga?",
       hint: "3 tak chunein. Hum aap ke alfaaz mein likh denge.",
@@ -154,10 +127,13 @@ export const COPY: Record<Lang, Copy> = {
       copied: "Copy ho gaya. Google khul raha hai…",
       copyFailed: "Copy nahin hua. Text ko daba kar rakhein aur copy karein, phir Google kholein.",
       openOnly: "Google kholein",
-      own: "Khud likhna hai",
-      paste: (n) => `Google mein ${n} star dabayein, phir box ko daba kar rakhein aur Paste chunein.`,
+      paste: (n) => `Google mein ${n} star dabayein, phir box daba kar Paste karein.`,
       back: "Wapis",
+      editHint: "Text par tap kar ke jo chahein badlein",
     },
+    note: { title: "Kya ghalat hua?", titleHappy: "Owner ko message bhejein", orGoogle: "Google par likhna chahte hain?", googleLink: "Google review dein" },
+    done: { title: "Shukriya!", google: (name) => `Aap ka review doosron ko ${name} tak pohanchne mein madad karta hai. Bohat shukriya.`, note: "Aap ka message seedha owner tak pohanch gaya. Koi aur nahin dekhega.", again: "Dobara copy karein aur Google kholein" },
+    stepOf: (a, b) => `Step ${a} / ${b}`,
   },
   ur: {
     thanks: "آنے کا شکریہ",
@@ -165,13 +141,7 @@ export const COPY: Record<Lang, Copy> = {
     hint: "ستارے پر ٹیپ کریں",
     labels: ["برا", "ٹھیک نہیں", "ٹھیک تھا", "اچھا", "بہت اچھا"],
     starName: (n) => `${n} ستارے`,
-    happy: "شکریہ! کیا آپ گوگل پر بھی بتا دیں گے؟ صرف تیس سیکنڈ لگتے ہیں اور دوسروں کو ہمیں ڈھونڈنے میں مدد ملتی ہے۔",
-    unhappy: "سچ بتانے کا شکریہ۔ مالک کو بتائیں کہ کیا غلط ہوا، یا گوگل پر اپنا ریویو دیں۔",
-    google: "گوگل پر ریویو دیں",
-    googleNote: (n) => `گوگل اپنا ریویو باکس کھولے گا: وہاں دوبارہ ${n} ستارے دبائیں، پھر ایک سطر لکھیں۔`,
-    opening: "گوگل کھل رہا ہے…",
     skip: "سیدھا گوگل پر جائیں",
-    private: "مالک کو نجی طور پر بتائیں",
     form: {
       message: "آپ مالک کو کیا بتانا چاہتے ہیں؟",
       name: "آپ کا نام",
@@ -180,13 +150,8 @@ export const COPY: Record<Lang, Copy> = {
       send: "مالک کو بھیجیں",
       sending: "بھیج رہے ہیں…",
       only: "یہ صرف مالک دیکھے گا۔ کہیں پوسٹ نہیں ہوتا۔",
-      cancel: "واپس",
     },
-    sent: "مالک کو بھیج دیا",
-    sentNote: "شکریہ۔ آپ کا پیغام سیدھا مالک تک پہنچ گیا، اور کوئی اور نہیں دیکھے گا۔",
     noGoogle: "ہمارا گوگل ریویو لنک ابھی تیار ہو رہا ہے۔ تب تک آپ مالک کو پیغام بھیج سکتے ہیں۔",
-    chooseGoogleSub: "لکھنے میں ہم مدد کریں گے",
-    privateSub: "صرف مالک پڑھے گا",
     write: {
       title: "کیا خاص لگا؟",
       hint: "تین تک چنیں۔ ہم آپ کے الفاظ میں لکھ دیں گے۔",
@@ -206,9 +171,12 @@ export const COPY: Record<Lang, Copy> = {
       copied: "کاپی ہو گیا۔ گوگل کھل رہا ہے…",
       copyFailed: "کاپی نہیں ہوا۔ متن کو دبا کر رکھیں اور کاپی کریں، پھر گوگل کھولیں۔",
       openOnly: "گوگل کھولیں",
-      own: "خود لکھنا ہے",
-      paste: (n) => `گوگل میں ${n} ستارے دبائیں، پھر باکس کو دبا کر رکھیں اور Paste چنیں۔`,
+      paste: (n) => `گوگل میں ${n} ستارے دبائیں، پھر باکس دبا کر Paste کریں۔`,
       back: "واپس",
+      editHint: "متن پر ٹیپ کر کے جو چاہیں بدلیں",
     },
+    note: { title: "کیا غلط ہوا؟", titleHappy: "مالک کو پیغام بھیجیں", orGoogle: "گوگل پر لکھنا چاہتے ہیں؟", googleLink: "گوگل ریویو دیں" },
+    done: { title: "شکریہ!", google: (name) => `آپ کا ریویو دوسروں کو ${name} تک پہنچنے میں مدد دیتا ہے۔ بہت شکریہ۔`, note: "آپ کا پیغام سیدھا مالک تک پہنچ گیا۔ کوئی اور نہیں دیکھے گا۔", again: "دوبارہ کاپی کریں اور گوگل کھولیں" },
+    stepOf: (a, b) => `مرحلہ ${a} از ${b}`,
   },
 };

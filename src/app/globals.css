@@ -749,49 +749,6 @@
   background: var(--color-amber);
   opacity: 0;
 }
-/* the private note: appears at full size at once (so a phone can scroll to it and focus it
-   inside the tap), fading and rising into place */
-@media (prefers-reduced-motion: no-preference) {
-  .rv-note-in {
-    animation: rise 420ms var(--ease-out-expo) both;
-    --rise: 10px;
-  }
-}
-.rv-reveal {
-  display: grid;
-  grid-template-rows: 0fr;
-  transition: grid-template-rows 560ms var(--ease-out-expo);
-}
-.rv-reveal.is-open {
-  grid-template-rows: 1fr;
-}
-/* clip, not hidden: hidden would make this a scroll box and stop the drafts' dock from sticking
-   to the screen. The side padding gives the glass panes' shadows room inside the clip. */
-.rv-reveal-inner {
-  min-height: 0;
-  overflow: hidden;
-  overflow: clip;
-  margin-inline: -16px;
-  padding-inline: 16px;
-  padding-bottom: 8px;
-  opacity: 0;
-  transform: translateY(10px);
-  transition:
-    opacity 380ms var(--ease-out-quint),
-    transform 520ms var(--ease-out-expo);
-}
-.rv-reveal.is-open > .rv-reveal-inner {
-  opacity: 1;
-  transform: none;
-  transition-delay: 120ms;
-}
-.rv-reveal:not(.is-open) > .rv-reveal-inner {
-  visibility: hidden;
-  transition:
-    opacity 200ms ease,
-    transform 200ms ease,
-    visibility 0s 200ms;
-}
 .rv-google .rv-arrow {
   transition: transform 240ms var(--ease-out-quint);
 }
@@ -1028,53 +985,6 @@ body:has(.rv-page[data-theme="light"]) {
     backdrop-filter: none;
   }
 }
-/* the two ways on: equal tiles */
-.rv-tile {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  width: 100%;
-  min-height: 76px;
-  padding: 14px 14px 14px 16px;
-  border-radius: 22px;
-  text-align: start;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-  transition:
-    transform 260ms var(--ease-out-quint),
-    box-shadow 260ms var(--ease-out-quint);
-}
-.rv-tile-icon {
-  display: grid;
-  place-items: center;
-  width: 44px;
-  height: 44px;
-  flex-shrink: 0;
-  border-radius: 14px;
-  background: var(--rv-chip);
-  border: 1px solid var(--rv-glass-line);
-}
-.rv-tile-arrow {
-  transition: transform 260ms var(--ease-out-quint);
-}
-@media (hover: hover) {
-  .rv-tile:hover {
-    transform: translateY(-2px);
-    box-shadow:
-      inset 0 1px 0 var(--rv-glass-edge),
-      var(--rv-lift-shadow);
-  }
-  .rv-tile:hover .rv-tile-arrow {
-    transform: translateX(3px);
-  }
-  [dir="rtl"] .rv-tile:hover .rv-tile-arrow {
-    transform: translateX(-3px) rotate(180deg);
-  }
-}
-.rv-tile:active {
-  transform: scale(0.985);
-  transition-duration: 100ms;
-}
 /* what stood out: tap to pick */
 .rv-chip {
   display: inline-flex;
@@ -1221,29 +1131,12 @@ body:has(.rv-page[data-theme="light"]) {
   border-radius: 999px;
   background: linear-gradient(90deg, var(--rv-star-off) 0%, var(--rv-line) 50%, var(--rv-star-off) 100%) 0 0 / 200% 100%;
 }
-/* the floating dock: copy and open Google, held at the bottom of the screen with the drafts */
-.rv-dock {
-  position: sticky;
-  bottom: 0;
-  z-index: 2;
-  margin-top: 12px;
-  padding-bottom: calc(10px + env(safe-area-inset-bottom));
-}
-.rv-dock-inner {
-  border-radius: 26px;
-  padding: 10px 10px 10px;
-  background-color: var(--rv-glass-strong);
-}
-
 @media (prefers-reduced-motion: no-preference) {
   .rv-ambient::before {
     animation: rv-drift 22s ease-in-out infinite alternate;
   }
   .rv-ambient::after {
     animation: rv-drift 26s ease-in-out -9s infinite alternate-reverse;
-  }
-  .rv-step-in {
-    animation: rv-materialize 620ms var(--ease-out-expo) both;
   }
   .rv-chip {
     animation: rise 520ms var(--ease-out-expo) both;
@@ -1259,10 +1152,6 @@ body:has(.rv-page[data-theme="light"]) {
   }
   .rv-line {
     animation: rv-shimmer 1.4s linear infinite;
-  }
-  .rv-dock {
-    animation: rise 620ms var(--ease-out-expo) 260ms both;
-    --rise: 18px;
   }
 }
 /* a pane arriving out of the glass: fades, rises and comes into focus */
@@ -1281,6 +1170,195 @@ body:has(.rv-page[data-theme="light"]) {
 @keyframes rv-shimmer {
   to {
     background-position: -200% 0;
+  }
+}
+
+/* ---- the steps after the stars: full screens that fit a phone without scrolling */
+.rv-step {
+  width: 100%;
+  max-width: 440px;
+  margin-inline: auto;
+}
+.rv-step-title {
+  font-size: 1.625rem;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+}
+[dir="rtl"] .rv-step-title {
+  letter-spacing: 0;
+}
+.rv-seg {
+  width: 22px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--rv-line);
+  transition:
+    background-color 400ms var(--ease-out-quint),
+    width 400ms var(--ease-out-expo);
+}
+.rv-seg.is-on {
+  width: 30px;
+  background: var(--color-amber);
+}
+.rv-gap {
+  margin-top: 24px;
+}
+/* Short phones (iPhone SE and the like): tighter, and the spare hints step aside. */
+@media (max-height: 720px) {
+  .rv-step .rv-gap {
+    margin-top: 14px;
+  }
+  .rv-step .rv-step-title {
+    font-size: 1.375rem;
+  }
+  .rv-step .rv-spare {
+    display: none;
+  }
+  .rv-step .rv-draft {
+    padding: 11px 14px 12px;
+  }
+  .rv-step .rv-chip {
+    min-height: 42px;
+  }
+}
+.rv-clamp {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+@media (max-height: 720px) {
+  .rv-clamp {
+    -webkit-line-clamp: 1;
+  }
+}
+.rv-edit-hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--rv-word);
+}
+/* the thank-you: a glass disc with a drawn check, sending out the brand's ripple */
+.rv-done {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 136px;
+  height: 136px;
+}
+.rv-done-disc {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100px;
+  height: 100px;
+  border-radius: 999px;
+}
+.rv-halo {
+  position: absolute;
+  inset: 18px;
+  border-radius: 999px;
+  border: 1.5px solid oklch(81% 0.165 76 / 0.6);
+  opacity: 0;
+}
+.rv-done-title {
+  font-size: 2.75rem;
+  font-weight: 600;
+  line-height: 1.05;
+  letter-spacing: -0.04em;
+}
+[dir="rtl"] .rv-done-title {
+  letter-spacing: 0;
+}
+/* Moving between steps: the old step recedes into the glass, the new one comes forward out of
+   it (the browser's view transitions). Back runs the same in reverse. */
+.rv-screen {
+  view-transition-name: rv-screen;
+}
+:root:has(.rv-page)::view-transition-old(root),
+:root:has(.rv-page)::view-transition-new(root) {
+  animation: none;
+}
+::view-transition-old(rv-screen) {
+  animation: rv-recede 240ms var(--ease-out-quint) both;
+}
+::view-transition-new(rv-screen) {
+  animation: rv-forward 560ms var(--ease-out-expo) both;
+}
+:root[data-rv-dir="back"]::view-transition-old(rv-screen) {
+  animation-name: rv-sink;
+}
+:root[data-rv-dir="back"]::view-transition-new(rv-screen) {
+  animation-name: rv-rise-back;
+}
+@keyframes rv-recede {
+  to {
+    opacity: 0;
+    transform: scale(0.94);
+    filter: blur(6px);
+  }
+}
+@keyframes rv-forward {
+  from {
+    opacity: 0;
+    transform: translateY(28px) scale(1.02);
+    filter: blur(8px);
+  }
+}
+@keyframes rv-sink {
+  to {
+    opacity: 0;
+    transform: translateY(28px) scale(1.02);
+    filter: blur(6px);
+  }
+}
+@keyframes rv-rise-back {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+    filter: blur(8px);
+  }
+}
+@keyframes rv-halo {
+  from {
+    opacity: 0.85;
+    transform: scale(0.85);
+  }
+  to {
+    opacity: 0;
+    transform: scale(2.2);
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .rv-enter-fwd {
+    animation: rv-forward 560ms var(--ease-out-expo) both;
+  }
+  .rv-enter-back {
+    animation: rv-rise-back 560ms var(--ease-out-expo) both;
+  }
+  .rv-done-disc {
+    animation: pop 640ms var(--ease-out-expo) 120ms both;
+  }
+  .rv-halo {
+    animation: rv-halo 2.6s var(--ease-out-quint) 700ms infinite;
+  }
+  .rv-halo:nth-child(2) {
+    animation-delay: 1.57s;
+  }
+  .rv-halo:nth-child(3) {
+    animation-delay: 2.43s;
+  }
+  .rv-done-title {
+    animation: rise 700ms var(--ease-out-expo) 320ms both;
+    --rise: 16px;
+  }
+  .rv-done-text {
+    animation: rise 700ms var(--ease-out-expo) 440ms both;
+    --rise: 12px;
   }
 }
 

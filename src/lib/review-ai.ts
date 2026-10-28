@@ -58,8 +58,11 @@ const CHIPS_SYSTEM = `You write short tap-to-pick options for a review page of a
 
 Rules:
 - 8 options, each 1 to 3 words, things a customer could genuinely experience at THIS business, based on its description and type (for example a specific signature dish or service named in the description, staff, cleanliness, speed, value, atmosphere).
-- Positive or neutral wording only (they describe what stood out), no superlatives like "best ever", no prices, no emojis.
-- Give the same 8 options in three languages, in the same order: English; Roman Urdu (Latin alphabet, as typed on WhatsApp in Pakistan); Urdu script.
+- Simple everyday words a customer would use, positive or neutral (they describe what stood out). No superlatives like "best ever", no prices, no emojis.
+- Give the same 8 options in three languages, in the same order:
+  - en: plain English.
+  - roman: Roman Urdu, real Urdu words in the Latin alphabet as people type on WhatsApp in Pakistan ("Mazedar khana", "Achi service", "Saaf jagah", "Friendly staff"). A dish or product keeps the name people use, with Urdu around it where natural ("Mazedar cold brew", "Taaza naan"). Never just the English option copied.
+  - ur: Urdu script.
 
 Return JSON only, matching the schema.`;
 
