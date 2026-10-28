@@ -25,6 +25,33 @@ export type Copy = {
   sent: string;
   sentNote: string;
   noGoogle: string;
+  // The two ways on, shown the same way for every rating.
+  chooseGoogleSub: string;
+  privateSub: string;
+  // Writing the Google review: the customer taps what stood out and we write it up three ways.
+  write: {
+    title: string;
+    hint: string;
+    issues: string;
+    extra: string;
+    go: string;
+    need: string;
+    writing: string;
+    failed: string;
+    retry: string;
+    title2: string;
+    hint2: string;
+    versions: [string, string, string];
+    again: string;
+    edit: string;
+    copyOpen: string;
+    copied: string;
+    copyFailed: string;
+    openOnly: string;
+    own: string;
+    paste: (stars: number) => string;
+    back: string;
+  };
 };
 
 export const COPY: Record<Lang, Copy> = {
@@ -54,6 +81,31 @@ export const COPY: Record<Lang, Copy> = {
     sent: "Sent to the owner",
     sentNote: "Thank you. Your note went straight to the owner, and nobody else sees it.",
     noGoogle: "Our Google review link is being set up. Meanwhile, you can send the owner a note.",
+    chooseGoogleSub: "We’ll help you put it into words",
+    privateSub: "Only the owner reads it",
+    write: {
+      title: "What stood out?",
+      hint: "Pick up to 3. We’ll write it up in your words.",
+      issues: "Could be better",
+      extra: "Anything else to add?",
+      go: "Write my review",
+      need: "Pick at least one, or add a line.",
+      writing: "Writing your review…",
+      failed: "That didn’t go through. Check your internet and try again.",
+      retry: "Try again",
+      title2: "Your review, three ways",
+      hint2: "Pick one and change anything you like. It’s your review.",
+      versions: ["Very short", "Short", "A bit longer"],
+      again: "Write again",
+      edit: "Your review",
+      copyOpen: "Copy & open Google",
+      copied: "Copied. Opening Google…",
+      copyFailed: "Couldn’t copy it. Press and hold the text to copy it, then open Google.",
+      openOnly: "Open Google",
+      own: "I’ll write my own",
+      paste: (n) => `In Google, tap ${n} ${n === 1 ? "star" : "stars"}, then press and hold the box and choose Paste.`,
+      back: "Back",
+    },
   },
   roman: {
     thanks: "Aane ka shukriya",
@@ -81,6 +133,31 @@ export const COPY: Record<Lang, Copy> = {
     sent: "Owner ko bhej diya",
     sentNote: "Shukriya. Aap ka message seedha owner tak pohanch gaya, aur koi aur nahin dekhega.",
     noGoogle: "Hamara Google review link abhi set ho raha hai. Tab tak aap owner ko message bhej sakte hain.",
+    chooseGoogleSub: "Likhne mein hum madad karenge",
+    privateSub: "Sirf owner parhega",
+    write: {
+      title: "Kya khaas laga?",
+      hint: "3 tak chunein. Hum aap ke alfaaz mein likh denge.",
+      issues: "Behtar ho sakta tha",
+      extra: "Kuch aur batana chahenge?",
+      go: "Mera review likhein",
+      need: "Kam az kam ek chunein, ya ek line likhein.",
+      writing: "Aap ka review likh rahe hain…",
+      failed: "Nahin ho saka. Internet check kar ke dobara koshish karein.",
+      retry: "Dobara koshish karein",
+      title2: "Aap ka review, teen tarah se",
+      hint2: "Ek chunein aur jo chahein badal dein. Review aap ka hai.",
+      versions: ["Bohat chhota", "Chhota", "Thora lamba"],
+      again: "Dobara likhein",
+      edit: "Aap ka review",
+      copyOpen: "Copy karein aur Google kholein",
+      copied: "Copy ho gaya. Google khul raha hai…",
+      copyFailed: "Copy nahin hua. Text ko daba kar rakhein aur copy karein, phir Google kholein.",
+      openOnly: "Google kholein",
+      own: "Khud likhna hai",
+      paste: (n) => `Google mein ${n} star dabayein, phir box ko daba kar rakhein aur Paste chunein.`,
+      back: "Wapis",
+    },
   },
   ur: {
     thanks: "آنے کا شکریہ",
@@ -108,5 +185,30 @@ export const COPY: Record<Lang, Copy> = {
     sent: "مالک کو بھیج دیا",
     sentNote: "شکریہ۔ آپ کا پیغام سیدھا مالک تک پہنچ گیا، اور کوئی اور نہیں دیکھے گا۔",
     noGoogle: "ہمارا گوگل ریویو لنک ابھی تیار ہو رہا ہے۔ تب تک آپ مالک کو پیغام بھیج سکتے ہیں۔",
+    chooseGoogleSub: "لکھنے میں ہم مدد کریں گے",
+    privateSub: "صرف مالک پڑھے گا",
+    write: {
+      title: "کیا خاص لگا؟",
+      hint: "تین تک چنیں۔ ہم آپ کے الفاظ میں لکھ دیں گے۔",
+      issues: "بہتر ہو سکتا تھا",
+      extra: "کچھ اور بتانا چاہیں گے؟",
+      go: "میرا ریویو لکھیں",
+      need: "کم از کم ایک چنیں، یا ایک سطر لکھیں۔",
+      writing: "آپ کا ریویو لکھ رہے ہیں…",
+      failed: "نہیں ہو سکا۔ انٹرنیٹ چیک کر کے دوبارہ کوشش کریں۔",
+      retry: "دوبارہ کوشش کریں",
+      title2: "آپ کا ریویو، تین طرح سے",
+      hint2: "ایک چنیں اور جو چاہیں بدل دیں۔ ریویو آپ کا ہے۔",
+      versions: ["بہت مختصر", "مختصر", "تھوڑا لمبا"],
+      again: "دوبارہ لکھیں",
+      edit: "آپ کا ریویو",
+      copyOpen: "کاپی کریں اور گوگل کھولیں",
+      copied: "کاپی ہو گیا۔ گوگل کھل رہا ہے…",
+      copyFailed: "کاپی نہیں ہوا۔ متن کو دبا کر رکھیں اور کاپی کریں، پھر گوگل کھولیں۔",
+      openOnly: "گوگل کھولیں",
+      own: "خود لکھنا ہے",
+      paste: (n) => `گوگل میں ${n} ستارے دبائیں، پھر باکس کو دبا کر رکھیں اور Paste چنیں۔`,
+      back: "واپس",
+    },
   },
 };

@@ -1,13 +1,17 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { ArrowRight, Moon, Sun } from "lucide-react";
+import { flushSync } from "react-dom";
+import { ArrowRight, ChevronRight, LockKeyhole, Moon, Sun } from "lucide-react";
 import { COPY, LANG_NAMES, LANGS, type Lang } from "./copy";
+import { glideTo } from "./glide";
 import { PrivateFeedback } from "./private-feedback";
+import { GoogleMark, ReviewWriter, StepHead } from "./review-writer";
 
 type Props = {
   // slug: what the page reports back with (the item's code, or the old slug); base: the page's own address.
-  business: { name: string; slug: string; hasGoogleLink: boolean; intro: boolean; base?: string };
+  // chips: the "what stood out" picks, issues: the "could be better" ones, in every language.
+  business: { name: string; slug: string; hasGoogleLink: boolean; intro: boolean; base?: string; chips: Record<Lang, string[]>; issues: Record<Lang, string[]> };
   source: string;
   preview?: boolean;
 };
@@ -42,8 +46,10 @@ const SPARKS = Array.from({ length: 12 }, (_, i) => {
 });
 
 // The customer's whole visit to Reputra: tap the stars, then choose Google or a private note.
-// Both choices are shown for every rating, the same way: Google's rules forbid steering only
-// happy customers to a review. The stars are recorded so the owner learns how visits felt.
+// Both choices are shown for every rating, as two equal tiles: Google's rules forbid steering
+// only happy customers to a review. Only their order follows the stars (Google first from 4,
+// the note first below). Google leads into the writer (picks, three drafts, copy and open);
+// the note opens in place. The stars are recorded so the owner learns how visits felt.
 export function ReviewFlow({ business, source, preview = false }: Props) {
   const stored = useSyncExternalStore(noSubscribe, savedLang, () => "en" as Lang);
   const [picked, setPicked] = useState<Lang | null>(null);
@@ -68,8 +74,12 @@ export function ReviewFlow({ business, source, preview = false }: Props) {
   const [rating, setRating] = useState(0);
   const [hover, setHover] = useState(0);
   const [burst, setBurst] = useState(0); // bumps on every tap, replays the ripple
-  const [leaving, setLeaving] = useState(false);
+  const [step, setStep] = useState<"choose" | "write" | "private">("choose");
   const sent = useRef(false);
+  const stepTop = useRef<HTMLDivElement>(null);
+  const noteForm = useRef<HTMLFormElement>(null);
+  const noteBox = useRef<HTMLTextAreaElement>(null);
+  const stopGlide = useRef<() => void>(() => {});
   const latest = useRef(0);
   const t = COPY[lang];
 
@@ -114,6 +124,31 @@ export function ReviewFlow({ business, source, preview = false }: Props) {
     } catch {}
   }
 
+  useEffect(() => () => stopGlide.current(), []);
+
+  function openWriter() {
+    flush();
+    setStep("write");
+    requestAnimationFrame(() => (stopGlide.current = glideTo(stepTop.current)));
+  }
+
+  // Opens the note inside the tap itself: iPhone only shows the keyboard for a field focused
+  // during the tap. The note renders at full size at once (it fades and rises, it doesn't grow),
+  // so its place on the page is known straight away and the scroll lands on it.
+  function openPrivate() {
+    flushSync(() => {
+      flush();
+      setStep("private");
+    });
+    noteBox.current?.focus({ preventScroll: true });
+    stopGlide.current = glideTo(noteForm.current);
+  }
+
+  function backToChoice() {
+    setStep("choose");
+    requestAnimationFrame(() => (stopGlide.current = glideTo(stepTop.current, 120)));
+  }
+
   function pickLang(next: Lang) {
     setPicked(next);
     try {
@@ -138,10 +173,13 @@ export function ReviewFlow({ business, source, preview = false }: Props) {
   return (
     <div
       ref={root}
-      className={`flex flex-1 flex-col ${business.intro ? "rv-with-intro" : ""} ${rtl ? "font-urdu" : ""}`}
+      className={`relative isolate flex flex-1 flex-col ${business.intro ? "rv-with-intro" : ""} ${rtl ? "font-urdu" : ""}`}
       dir={rtl ? "rtl" : "ltr"}
       lang={lang === "ur" ? "ur" : lang === "roman" ? "ur-Latn" : "en"}
+      style={{ "--rv-glow": rating / 5 } as React.CSSProperties}
     >
+      {/* The warm light the glass floats over; it brightens with the stars. */}
+      <div className="rv-ambient" aria-hidden="true" />
       <div className="rv-in flex items-center justify-end gap-2" style={{ "--d": "0ms" } as React.CSSProperties} dir="ltr">
         <div className="flex gap-1 rounded-full border border-(--rv-line) p-1" role="group" aria-label="Language">
           {LANGS.map((l) => (
@@ -270,30 +308,50 @@ export function ReviewFlow({ business, source, preview = false }: Props) {
           )}
 
           {/* The next step, for every rating */}
-          <div className={`rv-reveal ${rating ? "is-open" : ""}`} aria-hidden={!rating}>
+          <div className={`rv-reveal ${rating ? "is-open" : ""}`} aria-hidden={!rating} inert={!rating}>
             <div className="rv-reveal-inner">
-              <p className={`mt-8 text-(--rv-fg2) ${rtl ? "text-lg leading-loose" : "text-[1.05rem] leading-relaxed"}`}>
-                {business.hasGoogleLink ? (rating >= 4 ? t.happy : t.unhappy) : t.noGoogle}
-              </p>
-              {business.hasGoogleLink && (
-                <>
-                  <a
-                    href={googleHref}
-                    tabIndex={rating ? 0 : -1}
-                    onClick={() => {
-                      flush();
-                      setLeaving(true);
-                    }}
-                    className="rv-google btn btn-gold mt-6 min-h-14 w-full text-[1.05rem]"
-                  >
-                    <GoogleMark />
-                    <span>{leaving ? t.opening : t.google}</span>
-                    <ArrowRight aria-hidden="true" className={`rv-arrow size-5 ${rtl ? "rotate-180" : ""}`} strokeWidth={2} />
-                  </a>
-                  <p className="mt-2 text-center text-xs text-(--rv-fg3)">{t.googleNote(rating || 5)}</p>
-                </>
-              )}
-              <PrivateFeedback slug={business.slug} source={source} copy={t} active={Boolean(rating)} onOpen={flush} />
+              <div ref={stepTop} className="scroll-mt-4">
+                {step === "choose" && (
+                  <div key="choose" className="rv-step-in">
+                    <p className={`mt-8 text-(--rv-fg2) ${rtl ? "text-lg leading-loose" : "text-[1.05rem] leading-relaxed"}`}>
+                      {business.hasGoogleLink ? (rating >= 4 ? t.happy : t.unhappy) : t.noGoogle}
+                    </p>
+                    <div className={`mt-6 flex gap-3 ${rating >= 4 ? "flex-col" : "flex-col-reverse"}`}>
+                      {business.hasGoogleLink && (
+                        <ChoiceTile icon={<GoogleMark />} title={t.google} sub={t.chooseGoogleSub} onClick={openWriter} rtl={rtl} />
+                      )}
+                      <ChoiceTile
+                        icon={<LockKeyhole aria-hidden="true" className="size-5" strokeWidth={1.9} />}
+                        title={t.private}
+                        sub={t.privateSub}
+                        onClick={openPrivate}
+                        rtl={rtl}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {step === "write" && (
+                  <ReviewWriter
+                    slug={business.slug}
+                    rating={rating}
+                    lang={lang}
+                    copy={t}
+                    chips={business.chips}
+                    issues={business.issues}
+                    googleHref={googleHref}
+                    onBack={backToChoice}
+                    onLeave={flush}
+                  />
+                )}
+
+                {step === "private" && (
+                  <div key="private" className="mt-6">
+                    <StepHead title={t.private} back={t.write.back} onBack={backToChoice} />
+                    <PrivateFeedback slug={business.slug} source={source} copy={t} formRef={noteForm} boxRef={noteBox} onCancel={backToChoice} />
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </section>
@@ -302,14 +360,16 @@ export function ReviewFlow({ business, source, preview = false }: Props) {
   );
 }
 
-// Google's "G", drawn in the button's ink so it reads as a destination, not a logo sticker.
-function GoogleMark() {
+// One of the two ways on. Both look the same on purpose: neither is the "right" answer.
+function ChoiceTile({ icon, title, sub, onClick, rtl }: { icon: React.ReactNode; title: string; sub: string; onClick: () => void; rtl: boolean }) {
   return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className="size-5 shrink-0">
-      <path
-        fill="currentColor"
-        d="M21.6 12.23c0-.68-.06-1.34-.17-1.97H12v3.73h5.39a4.6 4.6 0 0 1-2 3.02v2.5h3.24c1.9-1.75 2.97-4.32 2.97-7.28zM12 22c2.7 0 4.97-.9 6.63-2.43l-3.24-2.51c-.9.6-2.04.96-3.39.96-2.6 0-4.81-1.76-5.6-4.12H3.06v2.59A10 10 0 0 0 12 22zm-5.6-8.1a6 6 0 0 1 0-3.8V7.51H3.06a10 10 0 0 0 0 8.98L6.4 13.9zM12 5.98c1.47 0 2.79.5 3.83 1.5l2.87-2.87A9.6 9.6 0 0 0 12 2a10 10 0 0 0-8.94 5.51L6.4 10.1C7.19 7.74 9.4 5.98 12 5.98z"
-      />
-    </svg>
+    <button type="button" onClick={onClick} className="rv-glass rv-tile">
+      <span className="rv-tile-icon">{icon}</span>
+      <span className="min-w-0 flex-1">
+        <span className={`block font-semibold ${rtl ? "text-lg leading-relaxed" : "text-[1.05rem] leading-snug"}`}>{title}</span>
+        <span className="mt-0.5 block text-sm text-(--rv-fg2)">{sub}</span>
+      </span>
+      <ChevronRight aria-hidden="true" className="rv-tile-arrow size-5 shrink-0 text-(--rv-fg3) rtl:rotate-180" strokeWidth={1.9} />
+    </button>
   );
 }

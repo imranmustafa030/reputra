@@ -48,22 +48,31 @@ async function Overview() {
       detail: checking ? `${formatPKR(checking.amount)} · we’re checking the transfer` : `${PLAN_NAMES[access.plan!]} · until ${formatDay(access.paidUntil!)}`,
       state: "done",
     },
-    business.googleReviewUrl
-      ? { title: "Google link added", detail: "Customers land on your review box", state: "done" }
-      : {
+    // The review page's own setup, one cell: the Google link, then a line about the business.
+    !business.googleReviewUrl
+      ? {
           title: "Add your Google link",
           detail: "So the button opens your review box",
           state: "current",
           href: "/dashboard/settings#google",
           lede: "Next: add your Google review link, so the button on your review page opens your review box.",
-        },
+        }
+      : !business.description
+        ? {
+            title: "Describe your business",
+            detail: "So review picks fit your place",
+            state: "current",
+            href: "/dashboard/settings#about",
+            lede: "Next: describe your business in a line or two, so the review page suggests picks that fit your place.",
+          }
+        : { title: "Review page ready", detail: "Google link and picks set", state: "done" },
     pack?.status === "installed"
       ? { title: "Stand & card installed", detail: formatDay(pack.updatedAt), state: "done" }
       : pack
         ? {
             title: "Stand & card on the way",
             detail: PACK_STEPS[packIndex]?.owner ?? "Being prepared",
-            state: business.googleReviewUrl ? "current" : "next",
+            state: business.googleReviewUrl && business.description ? "current" : "next",
             lede: "Your stand and card are being prepared. Until they arrive, ask customers on WhatsApp.",
           }
         : { title: "Stand & card", detail: "Arranged with the Reputra team", state: "next" },

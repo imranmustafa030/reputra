@@ -82,13 +82,14 @@ The top bar has **Log in** (for existing customers) and **Get started**.
 ### 4.2 Customer side: the review page ✅
 
 - Opens from the QR code, the NFC tap or the WhatsApp link. No app, no login.
-- Shows "Thank you for visiting **[Business name]**", five stars, and the two buttons.
-- "Review us on Google" counts the tap, then opens Google's review box.
+- Shows "Thank you for visiting **[Business name]**" and five stars, in English, Roman Urdu or Urdu.
+- After the stars: two equal choices for every rating, "Post it on Google" and "Tell the owner privately". Only the order changes (Google first for 4–5 stars, the private note first for 1–3).
+- **Google, with help writing it:** the customer taps what stood out (up to 3; for 1–3 stars also "could be better" picks) and can add a line. We write it up three ways (very short, short, a bit longer) in their language, from their picks only. They pick one, change anything, and one tap copies it and opens Google's review box to paste. "I'll write my own" skips straight to Google. The writing is done by Google's free Gemini AI; without it, simple ready-made sentences are used, so it always works.
+- The picks come from the owner's "About your business" line (Settings, also asked right after the first payment). Without it, the usual picks for the type of business are shown.
 - "Tell the owner privately" opens a short form: message (required), name and phone (optional, for a reply).
 - If the team pauses an account, its review page shows "not found".
 
 To come:
-- ⬜ Urdu and Roman Urdu versions of the page (the website promises "in Urdu or English")
 - ⬜ The business's logo on the page
 
 ### 4.3 Business owner side: the dashboard ✅
@@ -175,7 +176,7 @@ Only Reputra team accounts can open it. The first admin is created by the seed (
 
 1. **Every customer sees the Google button**, happy or not. We never hide it from unhappy customers.
 2. **No gifts or discounts for reviews.** Not once, not as a "thank you".
-3. **No fake or bought reviews.** Every review comes from a real visit.
+3. **No fake or bought reviews.** Every review comes from a real visit. The writing help only words what the customer picked and typed; they read it, can change it, and post it themselves.
 4. **No bulk WhatsApp.** One message at a time, from the business's own number, to customers who actually visited. (The pasted list still opens WhatsApp one customer per tap.)
 
 ---

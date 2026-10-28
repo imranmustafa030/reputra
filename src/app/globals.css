@@ -765,9 +765,15 @@
 .rv-reveal.is-open {
   grid-template-rows: 1fr;
 }
+/* clip, not hidden: hidden would make this a scroll box and stop the drafts' dock from sticking
+   to the screen. The side padding gives the glass panes' shadows room inside the clip. */
 .rv-reveal-inner {
   min-height: 0;
   overflow: hidden;
+  overflow: clip;
+  margin-inline: -16px;
+  padding-inline: 16px;
+  padding-bottom: 8px;
   opacity: 0;
   transform: translateY(10px);
   transition:
@@ -940,6 +946,344 @@ body:has(.rv-page[data-theme="light"]) {
     background-color 400ms ease,
     color 400ms ease;
 }
+/* ------------------------------------------------- the review page's glass
+   Spatial panes over a warm light. The light (.rv-ambient) is two soft amber pools fixed behind
+   the page that brighten with the stars (--rv-glow, 0 to 1). The next steps float over it as
+   frosted panes: translucent fill, a specular top edge, a soft shadow with real offset. Where the
+   browser can't blur, or the phone asks for less transparency, the panes turn solid. */
+.rv-page {
+  --rv-error: oklch(50% 0.19 27);
+  --rv-glass: oklch(100% 0 0 / 0.56);
+  --rv-glass-solid: oklch(99% 0.005 85);
+  --rv-glass-strong: oklch(100% 0 0 / 0.8);
+  --rv-glass-edge: oklch(100% 0 0 / 0.95);
+  --rv-glass-line: oklch(35% 0.04 70 / 0.12);
+  --rv-glass-shadow: 0 1px 2px oklch(35% 0.05 70 / 0.06), 0 14px 32px -14px oklch(40% 0.09 65 / 0.3);
+  --rv-lift-shadow: 0 2px 6px oklch(35% 0.06 70 / 0.08), 0 24px 44px -18px oklch(42% 0.11 65 / 0.45);
+  --rv-chip: oklch(100% 0 0 / 0.5);
+  --rv-sheen: oklch(100% 0 0 / 0.14);
+  --rv-pool-a: oklch(86% 0.14 80 / 0.6);
+  --rv-pool-b: oklch(90% 0.08 55 / 0.55);
+}
+.rv-page[data-theme="dark"] {
+  --rv-error: oklch(75% 0.15 27);
+  --rv-glass: oklch(100% 0 0 / 0.065);
+  --rv-glass-solid: oklch(22% 0.008 70);
+  --rv-glass-strong: oklch(100% 0 0 / 0.1);
+  --rv-glass-edge: oklch(100% 0 0 / 0.16);
+  --rv-glass-line: oklch(100% 0 0 / 0.1);
+  --rv-glass-shadow: 0 1px 2px oklch(0% 0 0 / 0.3), 0 18px 40px -16px oklch(0% 0 0 / 0.7);
+  --rv-lift-shadow: 0 2px 6px oklch(0% 0 0 / 0.35), 0 26px 48px -18px oklch(0% 0 0 / 0.8);
+  --rv-chip: oklch(100% 0 0 / 0.06);
+  --rv-sheen: oklch(100% 0 0 / 0.025);
+  --rv-pool-a: oklch(72% 0.15 72 / 0.32);
+  --rv-pool-b: oklch(60% 0.12 45 / 0.24);
+}
+.rv-ambient {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+  opacity: calc(0.45 + var(--rv-glow, 0) * 0.55);
+  transition: opacity 900ms var(--ease-out-expo);
+}
+.rv-ambient::before,
+.rv-ambient::after {
+  content: "";
+  position: absolute;
+  width: 110vmax;
+  aspect-ratio: 1;
+  border-radius: 50%;
+}
+.rv-ambient::before {
+  top: -62vmax;
+  right: -48vmax;
+  background: radial-gradient(closest-side, var(--rv-pool-a), transparent);
+}
+.rv-ambient::after {
+  bottom: -66vmax;
+  left: -52vmax;
+  background: radial-gradient(closest-side, var(--rv-pool-b), transparent);
+}
+.rv-glass {
+  background-color: var(--rv-glass);
+  background-image: linear-gradient(180deg, var(--rv-sheen), transparent 70%);
+  border: 1px solid var(--rv-glass-line);
+  box-shadow:
+    inset 0 1px 0 var(--rv-glass-edge),
+    var(--rv-glass-shadow);
+  -webkit-backdrop-filter: blur(18px) saturate(1.5);
+  backdrop-filter: blur(18px) saturate(1.5);
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .rv-glass {
+    background-color: var(--rv-glass-solid);
+  }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .rv-glass {
+    background-color: var(--rv-glass-solid);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+/* the two ways on: equal tiles */
+.rv-tile {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  min-height: 76px;
+  padding: 14px 14px 14px 16px;
+  border-radius: 22px;
+  text-align: start;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    transform 260ms var(--ease-out-quint),
+    box-shadow 260ms var(--ease-out-quint);
+}
+.rv-tile-icon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border-radius: 14px;
+  background: var(--rv-chip);
+  border: 1px solid var(--rv-glass-line);
+}
+.rv-tile-arrow {
+  transition: transform 260ms var(--ease-out-quint);
+}
+@media (hover: hover) {
+  .rv-tile:hover {
+    transform: translateY(-2px);
+    box-shadow:
+      inset 0 1px 0 var(--rv-glass-edge),
+      var(--rv-lift-shadow);
+  }
+  .rv-tile:hover .rv-tile-arrow {
+    transform: translateX(3px);
+  }
+  [dir="rtl"] .rv-tile:hover .rv-tile-arrow {
+    transform: translateX(-3px) rotate(180deg);
+  }
+}
+.rv-tile:active {
+  transform: scale(0.985);
+  transition-duration: 100ms;
+}
+/* what stood out: tap to pick */
+.rv-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 1px solid var(--rv-glass-line);
+  background: var(--rv-chip);
+  font-size: 15px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  transition:
+    background-color 200ms var(--ease-out-quint),
+    border-color 200ms var(--ease-out-quint),
+    color 200ms var(--ease-out-quint),
+    opacity 200ms ease,
+    transform 140ms var(--ease-out-quint);
+}
+.rv-chip:active:not(:disabled) {
+  transform: scale(0.95);
+}
+.rv-chip[aria-pressed="true"] {
+  border-color: transparent;
+  background: var(--color-amber);
+  color: var(--color-ink);
+  font-weight: 500;
+}
+.rv-chip.is-issue[aria-pressed="true"] {
+  background: var(--rv-fg);
+  color: var(--rv-bg);
+}
+.rv-chip:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.rv-field {
+  display: block;
+  width: 100%;
+  border-radius: 16px;
+  border: 1px solid var(--rv-glass-line);
+  background: var(--rv-glass-strong);
+  padding: 12px 16px;
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--rv-fg);
+  resize: none;
+  transition:
+    border-color 200ms ease,
+    box-shadow 200ms ease;
+}
+.rv-field:focus {
+  outline: none;
+  border-color: var(--rv-fg3);
+  box-shadow: 0 0 0 4px oklch(81% 0.165 76 / 0.22);
+}
+/* the three drafts: the chosen one lifts toward the customer and becomes editable */
+.rv-draft {
+  position: relative;
+  display: block;
+  width: 100%;
+  padding: 14px 16px 16px;
+  border-radius: 22px;
+  text-align: start;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    transform 420ms var(--ease-out-expo),
+    box-shadow 420ms var(--ease-out-expo),
+    background-color 300ms ease;
+}
+.rv-draft.is-picked {
+  cursor: auto;
+  background-color: var(--rv-glass-strong);
+  transform: translateY(-2px);
+  box-shadow:
+    inset 0 1px 0 var(--rv-glass-edge),
+    0 0 0 1.5px var(--color-amber),
+    var(--rv-lift-shadow);
+}
+.rv-draft-head {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--rv-fg3);
+}
+.rv-draft.is-picked .rv-draft-head {
+  color: var(--rv-word);
+}
+.rv-draft-text {
+  margin-top: 6px;
+  font-size: 16px;
+  line-height: 1.55;
+  color: var(--rv-fg);
+}
+[dir="rtl"] .rv-draft-text {
+  font-size: 17px;
+  line-height: 2;
+}
+.rv-draft-edit {
+  display: block;
+  width: 100%;
+  min-height: 3.2em;
+  overflow: hidden;
+  resize: none;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  padding: 0;
+}
+.rv-draft-edit:focus {
+  outline: none;
+}
+.rv-draft:has(.rv-draft-edit:focus-visible) {
+  box-shadow:
+    inset 0 1px 0 var(--rv-glass-edge),
+    0 0 0 2px var(--color-amber),
+    var(--rv-lift-shadow);
+}
+.rv-dot {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  border-radius: 999px;
+  border: 1.5px solid var(--rv-star-edge);
+  transition:
+    border-color 200ms ease,
+    box-shadow 200ms ease;
+}
+.rv-dot.is-on {
+  border-color: var(--color-amber);
+  box-shadow: inset 0 0 0 4px var(--rv-glass-solid), inset 0 0 0 10px var(--color-amber);
+}
+.rv-line {
+  display: block;
+  height: 12px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--rv-star-off) 0%, var(--rv-line) 50%, var(--rv-star-off) 100%) 0 0 / 200% 100%;
+}
+/* the floating dock: copy and open Google, held at the bottom of the screen with the drafts */
+.rv-dock {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  margin-top: 12px;
+  padding-bottom: calc(10px + env(safe-area-inset-bottom));
+}
+.rv-dock-inner {
+  border-radius: 26px;
+  padding: 10px 10px 10px;
+  background-color: var(--rv-glass-strong);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .rv-ambient::before {
+    animation: rv-drift 22s ease-in-out infinite alternate;
+  }
+  .rv-ambient::after {
+    animation: rv-drift 26s ease-in-out -9s infinite alternate-reverse;
+  }
+  .rv-step-in {
+    animation: rv-materialize 620ms var(--ease-out-expo) both;
+  }
+  .rv-chip {
+    animation: rise 520ms var(--ease-out-expo) both;
+    animation-delay: calc(var(--i, 0) * 35ms + 80ms);
+    --rise: 8px;
+  }
+  .rv-draft {
+    animation: rv-materialize 680ms var(--ease-out-expo) both;
+    animation-delay: calc(var(--i, 0) * 90ms);
+  }
+  .rv-pop {
+    animation: pop 360ms var(--ease-out-expo) both;
+  }
+  .rv-line {
+    animation: rv-shimmer 1.4s linear infinite;
+  }
+  .rv-dock {
+    animation: rise 620ms var(--ease-out-expo) 260ms both;
+    --rise: 18px;
+  }
+}
+/* a pane arriving out of the glass: fades, rises and comes into focus */
+@keyframes rv-materialize {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.985);
+    filter: blur(6px);
+  }
+}
+@keyframes rv-drift {
+  to {
+    transform: translate3d(-6vmax, 5vmax, 0) scale(1.06);
+  }
+}
+@keyframes rv-shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+
 .rv-page .btn-ghost {
   background: transparent;
   color: inherit;
