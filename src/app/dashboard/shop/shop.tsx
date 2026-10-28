@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useLayoutEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { AnimatePresence, motion, type Variants } from "motion/react";
@@ -89,24 +89,7 @@ export function Shop({ businessName, accounts, delivery }: Props) {
             </div>
 
             <div>
-              <ul className="grid gap-2" aria-label="Items">
-                {PRODUCTS.map((p) => {
-                  const active = shown === p.kind;
-                  return (
-                    <li key={p.kind} className="relative">
-                      {active && <motion.span layoutId="shop-pick" className="absolute inset-0 rounded-[14px] ring-[1.5px] ring-ink" transition={{ duration: 0.36, ease: EXPO }} />}
-                      <div className={`relative flex items-center gap-4 rounded-[14px] border p-4 transition-colors ${active ? "border-transparent bg-sheet" : "border-edge hover:bg-[oklch(98.8%_0.002_85)]"}`}>
-                        <button type="button" onClick={() => setShown(p.kind)} className="min-w-0 flex-1 text-left after:absolute after:inset-0 after:rounded-[14px]" aria-pressed={active}>
-                          <span className="block font-medium">{p.name}</span>
-                          <span className="block text-sm text-muted">{p.short}</span>
-                          <span className="num mt-1 block text-sm font-medium">{formatPKR(p.price)}</span>
-                        </button>
-                        <Stepper name={p.name} value={qty[p.kind]} onChange={(by) => change(p.kind, by)} />
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
+              <ItemList shown={shown} onShow={setShown} qty={qty} onChange={change} />
 
               <div className="mt-2 flex items-start gap-3 rounded-[14px] border border-dashed border-control p-4">
                 <Sparkles aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-amber-ink" strokeWidth={1.75} />
@@ -169,6 +152,78 @@ export function Shop({ businessName, accounts, delivery }: Props) {
         </motion.div>
       )}
     </AnimatePresence>
+  );
+}
+
+// The items, with one selection ring that belongs to the list and glides to the chosen row
+// (measured, so rows of any height work). The rows' own borders never change, so nothing
+// flashes while it moves; a fast second pick redirects the ring mid-way.
+function ItemList({
+  shown,
+  onShow,
+  qty,
+  onChange,
+}: {
+  shown: ProductKind;
+  onShow: (kind: ProductKind) => void;
+  qty: Record<ProductKind, number>;
+  onChange: (kind: ProductKind, by: number) => void;
+}) {
+  const list = useRef<HTMLUListElement>(null);
+  const ring = useRef<HTMLSpanElement>(null);
+  const current = useRef(shown);
+
+  // Puts the ring on a row. The browser animates it (a CSS transition on transform and height,
+  // see the ring's classes), so the glide stays smooth on the GPU even while the 3D stage is
+  // busy, and a quick second pick simply redirects it from wherever it is.
+  const place = (kind: ProductKind) => {
+    const row = list.current?.querySelector<HTMLElement>(`[data-kind="${kind}"]`);
+    const el = ring.current;
+    if (!row || !el) return;
+    el.style.transform = `translateY(${row.offsetTop}px)`;
+    el.style.height = `${row.offsetHeight}px`;
+  };
+
+  useLayoutEffect(() => {
+    current.current = shown;
+    place(shown);
+    // the first placement is instant; transitions switch on after it has painted
+    const el = ring.current;
+    if (el && !el.dataset.ready) requestAnimationFrame(() => (el.dataset.ready = "1"));
+  }, [shown]);
+
+  // keep the ring on its row when the rows change size (fonts arriving, a narrower window)
+  useEffect(() => {
+    const ul = list.current;
+    if (!ul) return;
+    const observer = new ResizeObserver(() => place(current.current));
+    observer.observe(ul);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <ul ref={list} className="relative grid gap-2" aria-label="Items">
+      <span
+        ref={ring}
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 top-0 z-[2] rounded-[14px] ring-[1.5px] ring-ink will-change-transform data-[ready]:transition-[transform,height] data-[ready]:duration-[420ms] data-[ready]:ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none!"
+      />
+      {PRODUCTS.map((p) => {
+        const active = shown === p.kind;
+        return (
+          <li key={p.kind} data-kind={p.kind} className="relative">
+            <div className={`relative flex items-center gap-4 rounded-[14px] border border-edge bg-sheet p-4 transition-colors duration-200 ${active ? "" : "hover:bg-[oklch(98.8%_0.002_85)]"}`}>
+              <button type="button" onClick={() => onShow(p.kind)} className="min-w-0 flex-1 text-left after:absolute after:inset-0 after:rounded-[14px]" aria-pressed={active}>
+                <span className="block font-medium">{p.name}</span>
+                <span className="block text-sm text-muted">{p.short}</span>
+                <span className="num mt-1 block text-sm font-medium">{formatPKR(p.price)}</span>
+              </button>
+              <Stepper name={p.name} value={qty[p.kind]} onChange={(by) => onChange(p.kind, by)} />
+            </div>
+          </li>
+        );
+      })}
+    </ul>
   );
 }
 
