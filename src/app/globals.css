@@ -749,6 +749,14 @@
   background: var(--color-amber);
   opacity: 0;
 }
+/* the private note: appears at full size at once (so a phone can scroll to it and focus it
+   inside the tap), fading and rising into place */
+@media (prefers-reduced-motion: no-preference) {
+  .rv-note-in {
+    animation: rise 420ms var(--ease-out-expo) both;
+    --rise: 10px;
+  }
+}
 .rv-reveal {
   display: grid;
   grid-template-rows: 0fr;
@@ -1858,6 +1866,9 @@ html[data-rv-intro="done"] .rv-film {
   background: #eeac2c; /* the film's final frame as browsers decode it */
   color: var(--color-ink);
   opacity: 0;
+  /* never takes taps itself: the film behind it handles "tap to skip", and if the film is
+     skipped the card would otherwise sit invisibly over the page and swallow every tap */
+  pointer-events: none;
   transition: opacity 180ms ease;
 }
 html[data-rv-intro="title"] .rv-film-title,

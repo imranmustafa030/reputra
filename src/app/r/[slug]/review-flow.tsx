@@ -290,7 +290,7 @@ export function ReviewFlow({ business, source, preview = false }: Props) {
                     <span>{leaving ? t.opening : t.google}</span>
                     <ArrowRight aria-hidden="true" className={`rv-arrow size-5 ${rtl ? "rotate-180" : ""}`} strokeWidth={2} />
                   </a>
-                  <p className="mt-2 text-center text-xs text-(--rv-fg3)">{t.googleNote}</p>
+                  <p className="mt-2 text-center text-xs text-(--rv-fg3)">{t.googleNote(rating || 5)}</p>
                 </>
               )}
               <PrivateFeedback slug={business.slug} source={source} copy={t} active={Boolean(rating)} onOpen={flush} />
