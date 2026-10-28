@@ -12,7 +12,6 @@ export type Copy = {
   hint: string;
   labels: [string, string, string, string, string];
   starName: (n: number) => string;
-  skip: string;
   form: { message: string; name: string; phone: string; optional: string; send: string; sending: string; only: string };
   noGoogle: string;
   // Writing the Google review: the customer taps what stood out and we write it up three ways.
@@ -38,9 +37,10 @@ export type Copy = {
     paste: (stars: number) => string;
     back: string;
     editHint: string;
+    extraPh: string;
   };
   // The private note's step, and the quieter way to Google under it (1 to 3 stars).
-  note: { title: string; titleHappy: string; orGoogle: string; googleLink: string };
+  note: { title: string; title3: string; titleHappy: string; orGoogle: string; googleLink: string; reply: string; need: string };
   // The last step.
   done: { title: string; google: (name: string) => string; note: string; again: string };
   stepOf: (step: number, of: number) => string;
@@ -53,7 +53,6 @@ export const COPY: Record<Lang, Copy> = {
     hint: "Tap a star",
     labels: ["Bad", "Not good", "Okay", "Good", "Excellent"],
     starName: (n) => `${n} ${n === 1 ? "star" : "stars"}`,
-    skip: "Go straight to Google",
     form: {
       message: "What should the owner know?",
       name: "Your name",
@@ -75,7 +74,7 @@ export const COPY: Record<Lang, Copy> = {
       failed: "That didn’t go through. Check your internet and try again.",
       retry: "Try again",
       title2: "Your review, three ways",
-      hint2: "Pick one and change anything you like. It’s your review.",
+      hint2: "Pick one and change anything you like.",
       versions: ["Very short", "Short", "A bit longer"],
       again: "Write again",
       edit: "Your review",
@@ -86,9 +85,10 @@ export const COPY: Record<Lang, Copy> = {
       paste: (n) => `In Google, tap ${n} ${n === 1 ? "star" : "stars"}, then hold the box and choose Paste.`,
       back: "Back",
       editHint: "Tap the text to change anything",
+      extraPh: "e.g. Loved the welcome",
     },
-    note: { title: "What went wrong?", titleHappy: "Send the owner a note", orGoogle: "Rather post it on Google?", googleLink: "Write a Google review" },
-    done: { title: "Thank you!", google: (name) => `Your review helps other people find ${name}. It means a lot.`, note: "Your note went straight to the owner. Nobody else sees it.", again: "Copy again & open Google" },
+    note: { title: "What went wrong?", title3: "What could be better?", titleHappy: "Send the owner a note", orGoogle: "Rather post it on Google?", googleLink: "Write a Google review", reply: "Want a reply? Add your name and phone", need: "Write a few words first, so the owner knows what happened." },
+    done: { title: "Thank you!", google: (name) => `Your review helps other people find ${name}. It means a lot.`, note: "Your message has reached the owner. They’ll look into it soon and work to put it right.", again: "Copy again & open Google" },
     stepOf: (a, b) => `Step ${a} of ${b}`,
   },
   roman: {
@@ -97,7 +97,6 @@ export const COPY: Record<Lang, Copy> = {
     hint: "Star par tap karein",
     labels: ["Bura", "Theek nahin", "Theek tha", "Acha", "Bohat acha"],
     starName: (n) => `${n} star`,
-    skip: "Seedha Google par jayein",
     form: {
       message: "Owner ko kya batana chahte hain?",
       name: "Aap ka naam",
@@ -119,7 +118,7 @@ export const COPY: Record<Lang, Copy> = {
       failed: "Nahin ho saka. Internet check kar ke dobara koshish karein.",
       retry: "Dobara koshish karein",
       title2: "Aap ka review, teen tarah se",
-      hint2: "Ek chunein aur jo chahein badal dein. Review aap ka hai.",
+      hint2: "Ek chunein, jo chahein badal dein.",
       versions: ["Bohat chhota", "Chhota", "Thora lamba"],
       again: "Dobara likhein",
       edit: "Aap ka review",
@@ -130,9 +129,10 @@ export const COPY: Record<Lang, Copy> = {
       paste: (n) => `Google mein ${n} star dabayein, phir box daba kar Paste karein.`,
       back: "Wapis",
       editHint: "Text par tap kar ke jo chahein badlein",
+      extraPh: "Jaise: welcome bohat acha tha",
     },
-    note: { title: "Kya ghalat hua?", titleHappy: "Owner ko message bhejein", orGoogle: "Google par likhna chahte hain?", googleLink: "Google review dein" },
-    done: { title: "Shukriya!", google: (name) => `Aap ka review doosron ko ${name} tak pohanchne mein madad karta hai. Bohat shukriya.`, note: "Aap ka message seedha owner tak pohanch gaya. Koi aur nahin dekhega.", again: "Dobara copy karein aur Google kholein" },
+    note: { title: "Kya ghalat hua?", title3: "Kya behtar ho sakta tha?", titleHappy: "Owner ko message bhejein", orGoogle: "Google par likhna chahte hain?", googleLink: "Google review dein", reply: "Jawab chahiye? Apna naam aur phone dein", need: "Pehle kuch alfaaz likhein, taake owner ko pata chale kya hua." },
+    done: { title: "Shukriya!", google: (name) => `Aap ka review doosron ko ${name} tak pohanchne mein madad karta hai. Bohat shukriya.`, note: "Aap ka message owner tak pohanch gaya. Woh is par jald ghaur karenge aur isay theek karne ki poori koshish karenge.", again: "Dobara copy karein aur Google kholein" },
     stepOf: (a, b) => `Step ${a} / ${b}`,
   },
   ur: {
@@ -141,7 +141,6 @@ export const COPY: Record<Lang, Copy> = {
     hint: "ستارے پر ٹیپ کریں",
     labels: ["برا", "ٹھیک نہیں", "ٹھیک تھا", "اچھا", "بہت اچھا"],
     starName: (n) => `${n} ستارے`,
-    skip: "سیدھا گوگل پر جائیں",
     form: {
       message: "آپ مالک کو کیا بتانا چاہتے ہیں؟",
       name: "آپ کا نام",
@@ -163,7 +162,7 @@ export const COPY: Record<Lang, Copy> = {
       failed: "نہیں ہو سکا۔ انٹرنیٹ چیک کر کے دوبارہ کوشش کریں۔",
       retry: "دوبارہ کوشش کریں",
       title2: "آپ کا ریویو، تین طرح سے",
-      hint2: "ایک چنیں اور جو چاہیں بدل دیں۔ ریویو آپ کا ہے۔",
+      hint2: "ایک چنیں، جو چاہیں بدل دیں۔",
       versions: ["بہت مختصر", "مختصر", "تھوڑا لمبا"],
       again: "دوبارہ لکھیں",
       edit: "آپ کا ریویو",
@@ -174,9 +173,10 @@ export const COPY: Record<Lang, Copy> = {
       paste: (n) => `گوگل میں ${n} ستارے دبائیں، پھر باکس دبا کر Paste کریں۔`,
       back: "واپس",
       editHint: "متن پر ٹیپ کر کے جو چاہیں بدلیں",
+      extraPh: "جیسے: استقبال بہت اچھا تھا",
     },
-    note: { title: "کیا غلط ہوا؟", titleHappy: "مالک کو پیغام بھیجیں", orGoogle: "گوگل پر لکھنا چاہتے ہیں؟", googleLink: "گوگل ریویو دیں" },
-    done: { title: "شکریہ!", google: (name) => `آپ کا ریویو دوسروں کو ${name} تک پہنچنے میں مدد دیتا ہے۔ بہت شکریہ۔`, note: "آپ کا پیغام سیدھا مالک تک پہنچ گیا۔ کوئی اور نہیں دیکھے گا۔", again: "دوبارہ کاپی کریں اور گوگل کھولیں" },
+    note: { title: "کیا غلط ہوا؟", title3: "کیا بہتر ہو سکتا تھا؟", titleHappy: "مالک کو پیغام بھیجیں", orGoogle: "گوگل پر لکھنا چاہتے ہیں؟", googleLink: "گوگل ریویو دیں", reply: "جواب چاہیے؟ اپنا نام اور فون دیں", need: "پہلے چند الفاظ لکھیں، تاکہ مالک کو معلوم ہو کیا ہوا۔" },
+    done: { title: "شکریہ!", google: (name) => `آپ کا ریویو دوسروں کو ${name} تک پہنچنے میں مدد دیتا ہے۔ بہت شکریہ۔`, note: "آپ کا پیغام مالک تک پہنچ گیا۔ وہ اس پر جلد غور کریں گے اور اسے ٹھیک کرنے کی پوری کوشش کریں گے۔", again: "دوبارہ کاپی کریں اور گوگل کھولیں" },
     stepOf: (a, b) => `مرحلہ ${a} از ${b}`,
   },
 };

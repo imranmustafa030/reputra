@@ -1,7 +1,7 @@
 "use client";
 
-import { useActionState, useEffect, useRef } from "react";
-import { ArrowLeft, Check, PenLine, RotateCw, Star } from "lucide-react";
+import { useActionState, useEffect, useRef, useState } from "react";
+import { AlertCircle, ArrowLeft, Check, ChevronDown, PenLine, RotateCw, Star } from "lucide-react";
 import { sendFeedback } from "@/app/actions/feedback";
 import { SubmitButton } from "@/components/form";
 import type { Copy } from "./copy";
@@ -40,14 +40,11 @@ export function StepBar({ t, step, of, rating, rtl, onBack }: { t: Copy; step: n
 }
 
 // `spare`: a hint the screen can do without on short phones, so nothing has to scroll.
-function StepTitle({ title, hint, rtl, aside, spare }: { title: string; hint?: string; rtl: boolean; aside?: React.ReactNode; spare?: boolean }) {
+function StepTitle({ title, hint, rtl, spare }: { title: string; hint?: string; rtl: boolean; spare?: boolean }) {
   return (
-    <div className="rv-gap flex items-start justify-between gap-3">
-      <div className="min-w-0">
-        <h2 className={`rv-step-title ${rtl ? "leading-[1.7]" : ""}`}>{title}</h2>
-        {hint && <p className={`mt-1 text-[15px] leading-snug text-(--rv-fg2) ${spare ? "rv-spare" : ""}`}>{hint}</p>}
-      </div>
-      {aside}
+    <div className="rv-gap">
+      <h2 className={`rv-step-title ${rtl ? "leading-[1.7]" : ""}`}>{title}</h2>
+      {hint && <p className={`rv-step-hint ${spare ? "rv-spare" : ""}`}>{hint}</p>}
     </div>
   );
 }
@@ -80,7 +77,7 @@ export function PicksStep({
   bar: React.ReactNode;
 }) {
   // With "could be better" picks as well, fewer of each, so the screen still fits.
-  const good = issues ? chips.slice(0, 5) : chips;
+  const good = issues ? chips.slice(0, 4) : chips.slice(0, 6);
   return (
     <div className="flex flex-1 flex-col">
       {bar}
@@ -88,18 +85,28 @@ export function PicksStep({
       <ChipGroup label={t.write.title} list={good} kind="g" picks={picks} onToggle={onToggle} />
       {issues && (
         <>
-          <p className="mt-5 mb-2.5 text-sm text-(--rv-fg3)">{t.write.issues}</p>
+          <p className="rv-label mt-5">{t.write.issues}</p>
           <ChipGroup label={t.write.issues} list={issues.slice(0, 4)} kind="b" picks={picks} onToggle={onToggle} />
         </>
       )}
-      <label htmlFor="rv-extra" className="mt-6 mb-2 block text-sm text-(--rv-fg2)">
+      <label htmlFor="rv-extra" className="rv-label mt-6">
         {t.write.extra} <span className="text-(--rv-fg3)">({t.form.optional})</span>
       </label>
-      <input id="rv-extra" value={extra} maxLength={300} onChange={(e) => onExtra(e.target.value)} className="rv-field" enterKeyHint="go" onKeyDown={(e) => e.key === "Enter" && onWrite()} />
+      <input
+        id="rv-extra"
+        value={extra}
+        maxLength={300}
+        placeholder={t.write.extraPh}
+        onChange={(e) => onExtra(e.target.value)}
+        className="rv-field"
+        enterKeyHint="go"
+        onKeyDown={(e) => e.key === "Enter" && onWrite()}
+      />
 
       <div className="mt-auto pt-5">
         {needPick && (
-          <p role="alert" className="rv-shake mb-3 text-center text-sm text-(--rv-error)">
+          <p role="alert" className="rv-problem rv-shake mb-3 justify-center">
+            <AlertCircle aria-hidden="true" className="size-4 shrink-0" strokeWidth={2} />
             {t.write.need}
           </p>
         )}
@@ -114,7 +121,7 @@ export function PicksStep({
 function ChipGroup({ label, list, kind, picks, onToggle }: { label: string; list: string[]; kind: "g" | "b"; picks: string[]; onToggle: (key: string) => void }) {
   const full = picks.length >= MAX_PICKS;
   return (
-    <div role="group" aria-label={label} className={`flex flex-wrap gap-2 ${kind === "g" ? "mt-5" : ""}`}>
+    <div role="group" aria-label={label} className={`flex flex-wrap gap-2 ${kind === "g" ? "mt-4" : ""}`}>
       {list.map((chip, i) => {
         const key = `${kind}${i}`;
         const on = picks.includes(key);
@@ -180,21 +187,7 @@ export function DraftsStep({
   return (
     <div className="flex flex-1 flex-col">
       {bar}
-      <StepTitle
-        title={t.write.title2}
-        hint={t.write.hint2}
-        spare
-        rtl={rtl}
-        aside={
-          ready &&
-          drafts?.ai && (
-            <button type="button" onClick={onAgain} className="-me-2 flex min-h-11 shrink-0 items-center gap-1.5 px-2 text-sm text-(--rv-fg2) hover:text-(--rv-fg)">
-              <RotateCw aria-hidden="true" className="size-4" strokeWidth={1.9} />
-              {t.write.again}
-            </button>
-          )
-        }
-      />
+      <StepTitle title={t.write.title2} hint={t.write.hint2} spare rtl={rtl} />
 
       {busy && <Writing label={t.write.writing} />}
 
@@ -239,6 +232,12 @@ export function DraftsStep({
               </div>
             );
           })}
+          {drafts.ai && (
+            <button type="button" onClick={onAgain} className="mx-auto -my-1 flex min-h-11 items-center gap-1.5 px-3 text-sm text-(--rv-fg2) hover:text-(--rv-fg)">
+              <RotateCw aria-hidden="true" className="size-4" strokeWidth={1.9} />
+              {t.write.again}
+            </button>
+          )}
         </div>
       )}
 
@@ -315,7 +314,7 @@ function AutoText({ value, onChange, label }: { value: string; onChange: (v: str
 export function NoteStep({
   t,
   rtl,
-  happy,
+  rating,
   noGoogle,
   slug,
   source,
@@ -326,7 +325,7 @@ export function NoteStep({
 }: {
   t: Copy;
   rtl: boolean;
-  happy: boolean;
+  rating: number;
   noGoogle: boolean;
   slug: string;
   source: string;
@@ -341,46 +340,78 @@ export function NoteStep({
     if (result?.ok) setTimeout(onSent, 0);
     return result;
   }, undefined);
+  const [empty, setEmpty] = useState(false);
+  const [reply, setReply] = useState(Boolean(state?.values?.name || state?.values?.phone));
+  const box = useRef<HTMLTextAreaElement>(null);
+  const title = rating >= 4 ? t.note.titleHappy : rating === 3 ? t.note.title3 : t.note.title;
+  const problem = empty ? t.note.need : state?.error;
+
+  // Our own message instead of the browser's bubble when the note is empty.
+  function check(e: React.FormEvent<HTMLFormElement>) {
+    if ((box.current?.value.trim().length ?? 0) >= 3) return;
+    e.preventDefault();
+    setEmpty(true);
+    box.current?.focus();
+  }
 
   return (
-    <form action={action} className="flex flex-1 flex-col">
+    <form action={action} onSubmit={check} noValidate className="flex flex-1 flex-col">
       {bar}
-      <StepTitle title={happy ? t.note.titleHappy : t.note.title} hint={noGoogle ? t.noGoogle : t.form.only} rtl={rtl} />
+      <StepTitle title={title} hint={noGoogle ? t.noGoogle : t.form.only} spare={!noGoogle} rtl={rtl} />
       <input type="hidden" name="slug" value={slug} />
       <input type="hidden" name="source" value={source} />
       <input type="text" name="website" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden="true" />
 
-      <label htmlFor="message" className="mt-6 mb-2 block text-sm text-(--rv-fg2)">
+      <label htmlFor="message" className="rv-label mt-6">
         {t.form.message}
       </label>
-      <textarea id="message" name="message" rows={4} required minLength={3} maxLength={2000} defaultValue={state?.values?.message} className="rv-field" />
+      <textarea
+        ref={box}
+        id="message"
+        name="message"
+        rows={4}
+        maxLength={2000}
+        defaultValue={state?.values?.message}
+        onChange={() => empty && setEmpty(false)}
+        aria-invalid={Boolean(problem)}
+        aria-describedby={problem ? "message-problem" : undefined}
+        className="rv-field rv-note-box"
+      />
+      {problem && (
+        <p key={problem} id="message-problem" role="alert" className="rv-problem rv-shake">
+          <AlertCircle aria-hidden="true" className="size-4 shrink-0" strokeWidth={2} />
+          {problem}
+        </p>
+      )}
 
-      <div className="mt-4 grid grid-cols-2 gap-3">
-        <div className="min-w-0">
-          <label htmlFor="fb-name" className="mb-2 block truncate text-sm text-(--rv-fg2)">
-            {t.form.name}
-          </label>
-          <input id="fb-name" name="name" autoComplete="name" maxLength={80} defaultValue={state?.values?.name} placeholder={t.form.optional} className="rv-field" />
+      {/* Name and phone only for someone who wants a reply, so the note itself stays the one thing to do. */}
+      <button type="button" onClick={() => setReply((r) => !r)} aria-expanded={reply} className="rv-reply">
+        <span>{t.note.reply}</span>
+        <ChevronDown aria-hidden="true" className={`size-4 shrink-0 transition-transform duration-300 ${reply ? "rotate-180" : ""}`} strokeWidth={2} />
+      </button>
+      {reply && (
+        <div className="rv-reply-fields grid gap-2.5">
+          <input name="name" autoComplete="name" maxLength={80} defaultValue={state?.values?.name} placeholder={t.form.name} aria-label={t.form.name} className="rv-field" />
+          <input
+            name="phone"
+            inputMode="tel"
+            autoComplete="tel"
+            maxLength={30}
+            defaultValue={state?.values?.phone}
+            placeholder={t.form.phone}
+            aria-label={t.form.phone}
+            className="rv-field"
+            dir={rtl ? "rtl" : "ltr"}
+          />
         </div>
-        <div className="min-w-0">
-          <label htmlFor="fb-phone" className="mb-2 block truncate text-sm text-(--rv-fg2)">
-            {t.form.phone}
-          </label>
-          <input id="fb-phone" name="phone" inputMode="tel" autoComplete="tel" maxLength={30} defaultValue={state?.values?.phone} placeholder={t.form.optional} className="rv-field" dir={rtl ? "rtl" : "ltr"} />
-        </div>
-      </div>
+      )}
 
       <div className="mt-auto pt-5">
-        {state?.error && (
-          <p aria-live="polite" className="rv-shake mb-3 text-center text-sm text-(--rv-error)">
-            {state.error}
-          </p>
-        )}
         <SubmitButton pending={t.form.sending} className="rv-cta btn btn-gold min-h-14 w-full text-[1.05rem]">
           {t.form.send}
         </SubmitButton>
         {showGoogle && (
-          <p className="mt-3 text-center text-sm text-(--rv-fg3)">
+          <p className="mt-2 text-center text-sm text-(--rv-fg3)">
             {t.note.orGoogle}{" "}
             <button type="button" onClick={onGoogle} className="inline-flex min-h-11 items-center text-(--rv-fg2) underline underline-offset-4 hover:text-(--rv-fg)">
               {t.note.googleLink}

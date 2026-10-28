@@ -918,6 +918,8 @@ body:has(.rv-page[data-theme="light"]) {
   --rv-glass-shadow: 0 1px 2px oklch(35% 0.05 70 / 0.06), 0 14px 32px -14px oklch(40% 0.09 65 / 0.3);
   --rv-lift-shadow: 0 2px 6px oklch(35% 0.06 70 / 0.08), 0 24px 44px -18px oklch(42% 0.11 65 / 0.45);
   --rv-chip: oklch(100% 0 0 / 0.5);
+  --rv-field-bg: oklch(100% 0 0 / 0.88);
+  --rv-field-line: oklch(35% 0.04 70 / 0.26);
   --rv-sheen: oklch(100% 0 0 / 0.14);
   --rv-pool-a: oklch(86% 0.14 80 / 0.6);
   --rv-pool-b: oklch(90% 0.08 55 / 0.55);
@@ -932,6 +934,8 @@ body:has(.rv-page[data-theme="light"]) {
   --rv-glass-shadow: 0 1px 2px oklch(0% 0 0 / 0.3), 0 18px 40px -16px oklch(0% 0 0 / 0.7);
   --rv-lift-shadow: 0 2px 6px oklch(0% 0 0 / 0.35), 0 26px 48px -18px oklch(0% 0 0 / 0.8);
   --rv-chip: oklch(100% 0 0 / 0.06);
+  --rv-field-bg: oklch(100% 0 0 / 0.07);
+  --rv-field-line: oklch(100% 0 0 / 0.26);
   --rv-sheen: oklch(100% 0 0 / 0.025);
   --rv-pool-a: oklch(72% 0.15 72 / 0.32);
   --rv-pool-b: oklch(60% 0.12 45 / 0.24);
@@ -990,12 +994,12 @@ body:has(.rv-page[data-theme="light"]) {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  min-height: 44px;
-  padding: 0 16px;
+  min-height: 42px;
+  padding: 0 15px;
   border-radius: 999px;
   border: 1px solid var(--rv-glass-line);
   background: var(--rv-chip);
-  font-size: 15px;
+  font-size: 14.5px;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
   -webkit-backdrop-filter: blur(10px);
@@ -1024,13 +1028,16 @@ body:has(.rv-page[data-theme="light"]) {
   opacity: 0.4;
   cursor: default;
 }
+/* a field reads as a field on glass: a clear edge, a little inner depth, a placeholder example */
 .rv-field {
   display: block;
   width: 100%;
-  border-radius: 16px;
-  border: 1px solid var(--rv-glass-line);
-  background: var(--rv-glass-strong);
-  padding: 12px 16px;
+  min-height: 48px;
+  border-radius: 14px;
+  border: 1px solid var(--rv-field-line);
+  background: var(--rv-field-bg);
+  box-shadow: inset 0 1px 2px oklch(0% 0 0 / 0.06);
+  padding: 11px 14px;
   font-size: 16px;
   line-height: 1.5;
   color: var(--rv-fg);
@@ -1039,10 +1046,52 @@ body:has(.rv-page[data-theme="light"]) {
     border-color 200ms ease,
     box-shadow 200ms ease;
 }
+.rv-field::placeholder {
+  color: var(--rv-fg3);
+}
 .rv-field:focus {
   outline: none;
-  border-color: var(--rv-fg3);
+  border-color: var(--color-amber);
   box-shadow: 0 0 0 4px oklch(81% 0.165 76 / 0.22);
+}
+.rv-field[aria-invalid="true"] {
+  border-color: var(--rv-error);
+}
+.rv-label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 14px;
+  color: var(--rv-fg2);
+}
+.rv-problem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--rv-error);
+}
+/* "Want a reply?": a quiet row that opens the name and phone fields */
+.rv-reply {
+  display: flex;
+  width: 100%;
+  min-height: 44px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 12px;
+  padding: 0 2px;
+  text-align: start;
+  font-size: 14px;
+  color: var(--rv-fg2);
+  cursor: pointer;
+}
+.rv-reply:hover {
+  color: var(--rv-fg);
+}
+.rv-reply-fields {
+  margin-top: 4px;
 }
 /* the three drafts: the chosen one lifts toward the customer and becomes editable */
 .rv-draft {
@@ -1180,11 +1229,18 @@ body:has(.rv-page[data-theme="light"]) {
   margin-inline: auto;
 }
 .rv-step-title {
-  font-size: 1.625rem;
+  font-size: 1.5rem;
   font-weight: 600;
   line-height: 1.2;
   letter-spacing: -0.025em;
   text-wrap: balance;
+}
+.rv-step-hint {
+  margin-top: 6px;
+  font-size: 14.5px;
+  line-height: 1.45;
+  color: var(--rv-fg2);
+  text-wrap: pretty;
 }
 [dir="rtl"] .rv-step-title {
   letter-spacing: 0;
@@ -1205,8 +1261,9 @@ body:has(.rv-page[data-theme="light"]) {
 .rv-gap {
   margin-top: 24px;
 }
-/* Short phones (iPhone SE and the like): tighter, and the spare hints step aside. */
-@media (max-height: 720px) {
+/* Most phones below ~780px of usable height (iPhone SE, mid Androids with browser bars):
+   tighter, and the spare hints step aside. */
+@media (max-height: 780px) {
   .rv-step .rv-gap {
     margin-top: 14px;
   }
@@ -1222,6 +1279,12 @@ body:has(.rv-page[data-theme="light"]) {
   .rv-step .rv-chip {
     min-height: 42px;
   }
+  .rv-step .rv-note-box {
+    height: 92px;
+  }
+}
+.rv-note-box {
+  height: 120px;
 }
 .rv-clamp {
   display: -webkit-box;
@@ -1229,7 +1292,7 @@ body:has(.rv-page[data-theme="light"]) {
   -webkit-line-clamp: 2;
   overflow: hidden;
 }
-@media (max-height: 720px) {
+@media (max-height: 780px) {
   .rv-clamp {
     -webkit-line-clamp: 1;
   }
@@ -1359,6 +1422,10 @@ body:has(.rv-page[data-theme="light"]) {
   .rv-done-text {
     animation: rise 700ms var(--ease-out-expo) 440ms both;
     --rise: 12px;
+  }
+  .rv-reply-fields {
+    animation: rise 420ms var(--ease-out-expo) both;
+    --rise: 8px;
   }
 }
 

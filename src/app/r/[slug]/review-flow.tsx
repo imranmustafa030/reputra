@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { flushSync } from "react-dom";
-import { ArrowRight, Moon, Sun } from "lucide-react";
+import { Moon, Sun } from "lucide-react";
 import { COPY, LANG_NAMES, LANGS, type Lang } from "./copy";
 import { DraftsStep, legacyCopy, MAX_PICKS, NoteStep, PicksStep, StepBar, ThanksStep, type Drafts } from "./steps";
 
@@ -394,17 +394,6 @@ export function ReviewFlow({ business, source, preview = false }: Props) {
                   </span>
                 </p>
 
-                {/* Straight to Google, for people who don't want to rate here first. */}
-                {business.hasGoogleLink && (
-                  <a
-                    href={googleHref}
-                    className="rv-in mx-auto mt-6 flex min-h-11 w-fit items-center gap-1.5 text-sm text-(--rv-fg3) underline-offset-4 hover:text-(--rv-fg) hover:underline"
-                    style={{ "--d": "700ms" } as React.CSSProperties}
-                  >
-                    {t.skip}
-                    <ArrowRight aria-hidden="true" className={`size-4 ${rtl ? "rotate-180" : ""}`} strokeWidth={1.75} />
-                  </a>
-                )}
               </section>
             </div>
           </>
@@ -457,7 +446,7 @@ export function ReviewFlow({ business, source, preview = false }: Props) {
           <NoteStep
             t={t}
             rtl={rtl}
-            happy={happy}
+            rating={rating}
             noGoogle={!business.hasGoogleLink}
             slug={business.slug}
             source={source}

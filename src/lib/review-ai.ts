@@ -57,12 +57,13 @@ const DRAFTS_SCHEMA = {
 const CHIPS_SYSTEM = `You write short tap-to-pick options for a review page of a local business in Pakistan. Customers tap up to three to say what stood out in their visit.
 
 Rules:
-- 8 options, each 1 to 3 words, things a customer could genuinely experience at THIS business, based on its description and type (for example a specific signature dish or service named in the description, staff, cleanliness, speed, value, atmosphere).
-- Simple everyday words a customer would use, positive or neutral (they describe what stood out). No superlatives like "best ever", no prices, no emojis.
-- Give the same 8 options in three languages, in the same order:
-  - en: plain English.
-  - roman: Roman Urdu, real Urdu words in the Latin alphabet as people type on WhatsApp in Pakistan ("Mazedar khana", "Achi service", "Saaf jagah", "Friendly staff"). A dish or product keeps the name people use, with Urdu around it where natural ("Mazedar cold brew", "Taaza naan"). Never just the English option copied.
-  - ur: Urdu script.
+- 6 options. Each is a short, natural phrase of 1 to 3 simple words, the way a customer would say what they liked, e.g.
+  - en: "Great coffee", "Friendly staff", "Quick service", "Clean place"
+  - roman: "Coffee zabardast", "Staff friendly", "Service jaldi", "Jagah saaf"
+  - ur: "زبردست کافی", "خوش اخلاق عملہ", "جلدی سروس", "صاف جگہ"
+- Choose the 6 that matter most for THIS business: at most 2 about a dish or product named in its description, the rest about staff, speed, cleanliness, value or atmosphere. Never two options that mean the same thing.
+- Positive or neutral only. No superlatives like "best ever", no prices, no emojis.
+- The same 6 options in three languages, in the same order: en is plain English; roman is Roman Urdu as people type it on WhatsApp in Pakistan (common English words like coffee, staff, service, wifi stay as they are); ur is Urdu script. Never a word-for-word translation that sounds odd: if a phrase sounds strange, use a simpler common one.
 
 Return JSON only, matching the schema.`;
 
@@ -155,7 +156,7 @@ export async function suggestChips(input: { name: string; category: Category; de
     0.5,
   );
   if (!out) return null;
-  const list = (v: unknown) => (Array.isArray(v) ? v.map((x) => clean(x, 28)).filter(Boolean).slice(0, 8) : []);
+  const list = (v: unknown) => (Array.isArray(v) ? v.map((x) => clean(x, 28)).filter(Boolean).slice(0, 6) : []);
   const chips = { en: list(out.en), roman: list(out.roman), ur: list(out.ur) };
   return chips.en.length >= 4 && chips.roman.length >= 4 && chips.ur.length >= 4 ? chips : null;
 }
@@ -189,9 +190,9 @@ const BY_CATEGORY: Partial<Record<Category, Chips>> = {
 export function defaultChips(category: Category): Chips {
   const extra = BY_CATEGORY[category];
   return {
-    en: [...(extra?.en ?? []), ...COMMON.en],
-    roman: [...(extra?.roman ?? []), ...COMMON.roman],
-    ur: [...(extra?.ur ?? []), ...COMMON.ur],
+    en: [...(extra?.en ?? []), ...COMMON.en].slice(0, 6),
+    roman: [...(extra?.roman ?? []), ...COMMON.roman].slice(0, 6),
+    ur: [...(extra?.ur ?? []), ...COMMON.ur].slice(0, 6),
   };
 }
 
