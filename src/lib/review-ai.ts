@@ -1,18 +1,21 @@
 import "server-only";
 import type { Category } from "@/models/Business";
 
-// Review drafts for the customer review page. The customer taps what stood out ("Friendly staff",
-// "Tasty biryani") and an AI writes three versions in their own language, from those picks only,
-// so every review is genuinely theirs and worded differently (Google filters copy-paste praise).
-// Gemini's free tier does the writing; without a key, or if it's slow or over its daily limit,
-// the drafts are put together from the picks with plain sentence templates, so the page never
-// breaks. The owner's description never reaches the drafts (a small model lets its details slip
-// in, which would put words in the customer's mouth); it shapes the picks instead, made once
-// when it's saved.
+// The writing help on the customer review page, both halves done by AI on the spot:
+// 1. The tap-to-pick words ("Staff acha tha", "Jagah saaf thi"), made for this business, in the
+//    customer's language and for their rating. Mostly general; a dish or product only when the
+//    owner's description clearly says they offer it, because a guess would put a false claim in
+//    a customer's review. Kept for half an hour per business and language, so most customers
+//    get them at once and the free quota lasts.
+// 2. Three drafts of the review, from what the customer tapped and typed only, so every review
+//    is genuinely theirs and worded differently (Google filters copy-paste praise). The owner's
+//    description never reaches the drafts: a small model lets its details slip in.
+// Gemini's free tier does both. Without a key, or if it's slow or over its daily limit, a few
+// general picks and plain sentence templates stand in, so the page never breaks.
 
 export type Lang = "en" | "roman" | "ur";
 export type Drafts = { veryShort: string; short: string; medium: string };
-export type Chips = Record<Lang, string[]>;
+export type Picks = { good: string[]; bad: string[] };
 
 // The light Flash model with thinking kept to a minimum: short reviews need no reasoning, and it
 // answers in about 3 seconds where the full model, thinking first, took over 30.
@@ -54,28 +57,33 @@ const DRAFTS_SCHEMA = {
   required: ["very_short", "short", "medium"],
 };
 
-const CHIPS_SYSTEM = `You write short tap-to-pick options for a review page of a local business in Pakistan. Customers tap up to three to say what stood out in their visit.
+const PICKS_SYSTEM = `You write the tap-to-pick words on the review page of a local business in Pakistan. A customer taps up to three to say how their visit was, and their picks are then written up into their review, so every option must be something this customer could truly say.
 
-Rules:
-- 6 options. Each one says WHAT was good, not just a thing: a thing plus how it was, in 2 to 4 simple words. "Cold brew" or "Quiet corners" alone mean nothing; "Coffee was great" and "Calm place to sit" do. Examples:
-  - en (the simplest English, short common words only): "Tasty cold coffee", "Kind staff", "Calm place", "Good wifi", "Clean place"
-  - roman (Roman Urdu as typed on WhatsApp): "Thandi coffee mazedar thi", "Staff ka rawaiya acha", "Sukoon wali jagah", "Wifi acha chalta hai"
-  - ur (simple spoken Urdu that everyone understands, the same plain words as the Roman Urdu but in Urdu letters; no formal or bookish words, and never English written in Urdu letters): "ٹھنڈی کافی مزیدار تھی", "عملہ اچھا تھا", "سکون والی جگہ", "انٹرنیٹ اچھا چلتا ہے"
-- A dish or product always comes with how it was ("Tasty cold coffee", never just "Cold coffee"; "Rolls taaza the", never just "Fresh rolls" in Roman Urdu).
-- Choose the 6 that matter most for THIS business: at most 2 about a dish or product named in its description (in plain words: "cold brew" becomes "cold coffee" if that is simpler), the rest about staff, speed, cleanliness, price or the place. Never two options that mean the same thing.
-- Positive or neutral only. No superlatives like "best ever", no prices, no emojis.
-- The same 6 options in all three languages, in the same order, each one natural in its own language, never a word-for-word translation.
+What to write:
+- "good": 6 options about what was good. When asked for them, "bad": 4 options about what could have been better.
+- Mostly GENERAL things any customer of this kind of business can judge: the staff, the service, speed or waiting time, cleanliness, price or value, the place itself. Choose what customers of this type of business care about most (a clinic: the doctor and the wait; a salon: the result; a restaurant: the taste of the food).
+- A SPECIFIC dish, product or service only when the description says clearly and directly that the business offers it ("we serve biryani", "known for our cold brew"). At most 1 such option in "good", none in "bad". With no description, or a vague one, use none. Never guess what they sell.
+- Every option says HOW it was, with a describing word: "Staff acha tha", "Jagah saaf thi", never just "Staff" or "Free wifi".
+- "good" options are positive; "bad" options are calm and polite. No superlatives, prices, numbers, emojis or punctuation.
+- No two options that mean the same thing.
+
+Size (strict): each option is 2 to 4 words and at most 22 characters, spaces included. Plain words anyone understands.
+
+Languages: write "roman" first, then "en" and "ur" saying exactly the same things in the same order.
+- roman: Roman Urdu as people type it on WhatsApp in Pakistan, Latin letters only. Common English words people say (staff, service, coffee) are fine. Good: "Staff acha tha", "Service jaldi thi", "Jagah saaf thi", "Qeemat munasib", and for a dish "Biryani mazedar thi". Bad: "Service slow thi", "Intezar lamba tha". Spell words the common way (mazedar, acha, saaf, jaldi, sukoon).
+- en: the simplest English, short common words. Good: "Kind staff", "Quick service", "Clean place", "Fair price". Bad: "Slow service", "Long wait".
+- ur: the same simple words as the Roman Urdu, in Urdu letters, swapping any English word for the everyday Urdu word (staff → عملہ, service → کام, wifi → انٹرنیٹ). No formal or bookish Urdu, never English written in Urdu letters, never Latin letters. Good: "عملہ اچھا تھا", "کام جلدی ہوا", "جگہ صاف تھی", "قیمت مناسب". Bad: "بہت دیر لگی", "انتظار لمبا تھا".
 
 Return JSON only, matching the schema.`;
 
-const CHIPS_SCHEMA = {
+const LIST = { type: "ARRAY", items: { type: "STRING" } };
+const PICKS_SCHEMA = {
   type: "OBJECT",
-  properties: {
-    en: { type: "ARRAY", items: { type: "STRING" } },
-    roman: { type: "ARRAY", items: { type: "STRING" } },
-    ur: { type: "ARRAY", items: { type: "STRING" } },
-  },
-  required: ["en", "roman", "ur"],
+  properties: Object.fromEntries(
+    (["roman", "en", "ur"] as const).map((l) => [l, { type: "OBJECT", properties: { good: LIST, bad: LIST }, required: ["good", "bad"] }]),
+  ),
+  required: ["roman", "en", "ur"],
+  propertyOrdering: ["roman", "en", "ur"],
 };
 
 async function gemini<T>(system: string, prompt: string, schema: object, temperature: number): Promise<T | null> {
@@ -150,78 +158,65 @@ function rightScript(text: string, lang: Lang) {
   return lang === "ur" ? ARABIC.test(text) : !ARABIC.test(text);
 }
 
-export async function suggestChips(input: { name: string; category: Category; description: string }): Promise<Chips | null> {
-  if (!input.description) return null;
-  const out = await gemini<Partial<Chips>>(
-    CHIPS_SYSTEM,
-    `Business: ${input.name}\nType: ${input.category}\nDescription: ${input.description}`,
-    CHIPS_SCHEMA,
-    0.5,
-  );
-  if (!out) return null;
-  const list = (v: unknown) => (Array.isArray(v) ? v.map((x) => clean(x, 32)).filter(Boolean).slice(0, 6) : []);
-  const chips = { en: list(out.en), roman: list(out.roman), ur: list(out.ur) };
-  return chips.en.length >= 4 && chips.roman.length >= 4 && chips.ur.length >= 4 ? chips : null;
+const PICK_MAX = 24; // characters; the prompt asks for 22, a little slack before a pick is dropped
+const PICKS_FOR = 30 * 60_000;
+// All three languages are made together (so they always say the same things) and kept together,
+// so a customer who switches language gets them at once.
+const picksCache = new Map<string, { at: number; picks: Record<Lang, Picks> }>();
+
+type PickInput = { id: string; name: string; category: Category; description: string; lang: Lang; low: boolean };
+
+export async function makePicks(input: PickInput): Promise<{ picks: Picks; ai: boolean }> {
+  const key = [input.id, input.low ? "low" : "high", input.name, input.category, input.description].join("|");
+  const hit = picksCache.get(key);
+  if (hit && Date.now() - hit.at < PICKS_FOR) return { picks: hit.picks[input.lang], ai: true };
+
+  const prompt = [
+    `Business: ${input.name}`,
+    `Type of business: ${input.category}`,
+    input.description ? `The owner's description: ${input.description}` : "The owner has not described the business. Use general options only.",
+    input.low ? 'Write "good" (6) and "bad" (4) in each language.' : 'Write "good" (6) in each language and leave "bad" empty.',
+  ].join("\n");
+  const out = await gemini<Partial<Record<Lang, Partial<Picks>>>>(PICKS_SYSTEM, prompt, PICKS_SCHEMA, 0.3);
+
+  const tidy = (v: unknown, n: number, lang: Lang) => {
+    const seen = new Set<string>();
+    return (Array.isArray(v) ? v : [])
+      .map((x) => clean(x, 60).replace(/[.!,;:۔]+$/, ""))
+      .filter((x) => x && x.length <= PICK_MAX && x.split(" ").length <= 5 && rightScript(x, lang))
+      .filter((x) => !seen.has(x.toLowerCase()) && seen.add(x.toLowerCase()))
+      .slice(0, n);
+  };
+  const all = {} as Record<Lang, Picks>;
+  for (const lang of ["roman", "en", "ur"] as const) {
+    const good = tidy(out?.[lang]?.good, 6, lang);
+    const bad = input.low ? tidy(out?.[lang]?.bad, 4, lang) : [];
+    if (good.length < 4 || (input.low && bad.length < 3)) return { picks: FALLBACK[input.lang](input.low), ai: false };
+    all[lang] = { good, bad };
+  }
+
+  if (picksCache.size > 500) picksCache.delete(picksCache.keys().next().value!);
+  picksCache.set(key, { at: Date.now(), picks: all });
+  return { picks: all[input.lang], ai: true };
 }
 
 /* -------------------------------------------------------------------------- fallbacks */
 
-// "Could be better", offered alongside the picks when a customer gives 1 to 3 stars, so an
-// unhappy customer's review can say what went wrong instead of only what went right.
-export const ISSUES: Chips = {
-  en: ["Slow service", "Long wait", "Not clean", "Too costly", "Staff not polite"],
-  roman: ["Service slow thi", "Intezar lamba tha", "Safai nahin thi", "Bohat mehnga tha", "Staff ka rawaiya theek nahin"],
-  ur: ["بہت دیر لگی", "انتظار لمبا تھا", "صفائی نہیں تھی", "بہت مہنگا تھا", "عملے کا رویہ ٹھیک نہیں"],
+// Only when the AI can't answer: a few general picks any business can be judged on.
+const FALLBACK: Record<Lang, (low: boolean) => Picks> = {
+  en: (low) => ({
+    good: ["Kind staff", "Quick service", "Clean place", "Fair price", "Nice place", "Good experience"],
+    bad: low ? ["Slow service", "Long wait", "Not clean", "Too costly"] : [],
+  }),
+  roman: (low) => ({
+    good: ["Staff acha tha", "Service jaldi thi", "Jagah saaf thi", "Qeemat munasib", "Achi jagah", "Acha tajurba"],
+    bad: low ? ["Service slow thi", "Intezar lamba tha", "Safai nahin thi", "Bohat mehnga tha"] : [],
+  }),
+  ur: (low) => ({
+    good: ["عملہ اچھا تھا", "کام جلدی ہوا", "جگہ صاف تھی", "قیمت مناسب", "اچھی جگہ", "اچھا تجربہ"],
+    bad: low ? ["بہت دیر لگی", "انتظار لمبا تھا", "صفائی نہیں تھی", "بہت مہنگا تھا"] : [],
+  }),
 };
-
-// Picks for each kind of business, until the owner's description gives better ones. Each says
-// what was good, in the simplest words of each language.
-const BY_CATEGORY: Record<Category, Chips> = {
-  restaurant: {
-    en: ["Tasty food", "Fresh food", "Food came fast", "Kind staff", "Clean place", "Fair price"],
-    roman: ["Khana mazedar tha", "Khana taaza tha", "Khana jaldi aaya", "Staff ka rawaiya acha", "Jagah saaf thi", "Qeemat munasib"],
-    ur: ["کھانا مزیدار تھا", "کھانا تازہ تھا", "کھانا جلدی آیا", "عملہ اچھا تھا", "جگہ صاف تھی", "قیمت مناسب"],
-  },
-  cafe: {
-    en: ["Great coffee", "Tasty food", "Calm place", "Kind staff", "Clean place", "Fair price"],
-    roman: ["Coffee zabardast thi", "Khana mazedar tha", "Sukoon wali jagah", "Staff ka rawaiya acha", "Jagah saaf thi", "Qeemat munasib"],
-    ur: ["کافی زبردست تھی", "کھانا مزیدار تھا", "سکون والی جگہ", "عملہ اچھا تھا", "جگہ صاف تھی", "قیمت مناسب"],
-  },
-  salon: {
-    en: ["Great result", "Skilled staff", "Very relaxing", "No long wait", "Clean place", "Fair price"],
-    roman: ["Result zabardast tha", "Staff mahir tha", "Bohat sukoon mila", "Intezar nahin karna para", "Jagah saaf thi", "Qeemat munasib"],
-    ur: ["نتیجہ زبردست تھا", "عملہ ماہر تھا", "بہت سکون ملا", "انتظار نہیں کرنا پڑا", "جگہ صاف تھی", "قیمت مناسب"],
-  },
-  clinic: {
-    en: ["Caring doctor", "Explained well", "Short wait", "Kind staff", "Clean place", "Fair fee"],
-    roman: ["Doctor hamdard the", "Achi tarah samjhaya", "Intezar kam tha", "Staff ka rawaiya acha", "Jagah saaf thi", "Fees munasib"],
-    ur: ["ڈاکٹر ہمدرد تھے", "اچھے سے سمجھایا", "انتظار کم تھا", "عملہ اچھا تھا", "جگہ صاف تھی", "فیس مناسب"],
-  },
-  gym: {
-    en: ["Good machines", "Helpful trainers", "Good vibe", "Clean place", "Not crowded", "Fair fee"],
-    roman: ["Machines achi hain", "Trainers madadgar hain", "Mahol acha hai", "Jagah saaf hai", "Rush nahin hota", "Fees munasib"],
-    ur: ["مشینیں اچھی ہیں", "ٹرینر مددگار ہیں", "ماحول اچھا ہے", "جگہ صاف ہے", "رش نہیں ہوتا", "فیس مناسب"],
-  },
-  shop: {
-    en: ["Lots of choice", "Helpful staff", "Good quality", "Fair price", "Quick service", "Clean shop"],
-    roman: ["Cheezein bohat hain", "Staff madadgar tha", "Achi quality", "Qeemat munasib", "Kaam jaldi hua", "Dukaan saaf thi"],
-    ur: ["بہت چیزیں ملیں", "عملہ مددگار تھا", "چیزیں اچھی ہیں", "قیمت مناسب", "کام جلدی ہوا", "دکان صاف تھی"],
-  },
-  hotel: {
-    en: ["Comfy room", "Clean room", "Helpful staff", "Good location", "Quiet at night", "Fair price"],
-    roman: ["Kamra aramdeh tha", "Kamra saaf tha", "Staff madadgar tha", "Location achi hai", "Raat ko sukoon tha", "Qeemat munasib"],
-    ur: ["کمرہ آرام دہ تھا", "کمرہ صاف تھا", "عملہ مددگار تھا", "جگہ اچھی ہے", "رات کو سکون تھا", "قیمت مناسب"],
-  },
-  other: {
-    en: ["Kind staff", "Quick service", "Good work", "Clean place", "Fair price", "Easy to find"],
-    roman: ["Staff ka rawaiya acha", "Kaam jaldi hua", "Kaam acha tha", "Jagah saaf thi", "Qeemat munasib", "Jagah aasani se mili"],
-    ur: ["عملہ اچھا تھا", "کام جلدی ہوا", "کام اچھا تھا", "جگہ صاف تھی", "قیمت مناسب", "جگہ آسانی سے ملی"],
-  },
-};
-
-export function defaultChips(category: Category): Chips {
-  return BY_CATEGORY[category] ?? BY_CATEGORY.other;
-}
 
 // Plain drafts from the picks, when the AI isn't available. The picks are short statements
 // ("Khana mazedar tha"), so they are joined as they are; the customer can still edit.

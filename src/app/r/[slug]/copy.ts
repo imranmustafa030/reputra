@@ -90,7 +90,7 @@ export const COPY: Record<Lang, Copy> = {
       extraPh: "e.g. Loved the welcome",
     },
     note: { title: "What went wrong?", title3: "What could be better?", titleHappy: "Send the owner a note", orGoogle: "Rather post it on Google?", googleLink: "Write a Google review", reply: "Want a reply? Add your name and phone", need: "Write a few words first, so the owner knows what happened." },
-    done: { title: "Thank you!", google: (name) => `Your review helps others find ${name}.`, note: "It’s with the owner. We’ll put it right.", again: "Copy again & open Google" },
+    done: { title: "Thank you!", google: (name) => `Your review helps others find ${name}.`, note: "We got your message. We’ll look into it soon.", again: "Copy again & open Google" },
     stepOf: (a, b) => `Step ${a} of ${b}`,
   },
   roman: {
@@ -135,7 +135,7 @@ export const COPY: Record<Lang, Copy> = {
       extraPh: "Jaise: welcome bohat acha tha",
     },
     note: { title: "Kya ghalat hua?", title3: "Kya behtar ho sakta tha?", titleHappy: "Owner ko message bhejein", orGoogle: "Google par likhna chahte hain?", googleLink: "Google review dein", reply: "Jawab chahiye? Apna naam aur phone dein", need: "Pehle kuch alfaaz likhein, taake owner ko pata chale kya hua." },
-    done: { title: "Shukriya!", google: (name) => `Aap ka review doosron ko ${name} tak layega.`, note: "Owner tak pohanch gaya. Hum isay theek karenge.", again: "Dobara copy karein aur Google kholein" },
+    done: { title: "Shukriya!", google: (name) => `Aap ka review doosron ko ${name} tak layega.`, note: "Aap ki baat humein mil gayi. Hum is par jald ghaur karenge.", again: "Dobara copy karein aur Google kholein" },
     stepOf: (a, b) => `Step ${a} / ${b}`,
   },
   ur: {
@@ -180,7 +180,7 @@ export const COPY: Record<Lang, Copy> = {
       extraPh: "جیسے: استقبال بہت اچھا تھا",
     },
     note: { title: "کیا غلط ہوا؟", title3: "کیا بہتر ہو سکتا تھا؟", titleHappy: "مالک کو پیغام بھیجیں", orGoogle: "گوگل پر لکھنا چاہتے ہیں؟", googleLink: "گوگل ریویو دیں", reply: "جواب چاہیے؟ اپنا نام اور فون دیں", need: "پہلے چند الفاظ لکھیں، تاکہ مالک کو معلوم ہو کیا ہوا۔" },
-    done: { title: "شکریہ!", google: (name) => `آپ کا ریویو دوسروں کو ${name} تک لائے گا۔`, note: "مالک تک پہنچ گیا۔ ہم اسے ٹھیک کریں گے۔", again: "دوبارہ کاپی کریں اور گوگل کھولیں" },
+    done: { title: "شکریہ!", google: (name) => `آپ کا ریویو دوسروں کو ${name} تک لائے گا۔`, note: "آپ کی بات ہمیں مل گئی۔ ہم اس پر جلد غور کریں گے۔", again: "دوبارہ کاپی کریں اور گوگل کھولیں" },
     stepOf: (a, b) => `مرحلہ ${a} از ${b}`,
   },
 };

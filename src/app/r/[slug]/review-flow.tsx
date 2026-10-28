@@ -8,8 +8,7 @@ import { DraftsStep, legacyCopy, MAX_PICKS, NoteStep, PicksStep, StepBar, Thanks
 
 type Props = {
   // slug: what the page reports back with (the item's code, or the old slug); base: the page's own address.
-  // chips: the "what stood out" picks, issues: the "could be better" ones, in every language.
-  business: { name: string; slug: string; hasGoogleLink: boolean; intro: boolean; base?: string; chips: Record<Lang, string[]>; issues: Record<Lang, string[]> };
+  business: { name: string; slug: string; hasGoogleLink: boolean; intro: boolean; base?: string };
   source: string;
   preview?: boolean;
 };
@@ -84,7 +83,11 @@ export function ReviewFlow({ business, source, preview = false }: Props) {
   const [ratingState, setRating] = useState(0);
   const [hover, setHover] = useState(0);
   const [burst, setBurst] = useState(0); // bumps on every tap, replays the ripple
-  const [picks, setPicks] = useState<string[]>([]); // by position, so a language switch keeps them ("g2", "b0")
+  const [picks, setPicks] = useState<string[]>([]); // by position in the words below ("g2", "b0")
+  // The tap-to-pick words, made by AI for this business, language and rating; asked for the moment
+  // the stars are tapped so they are usually ready when the screen comes in.
+  const [words, setWords] = useState<{ key: string; good: string[]; bad: string[] } | null>(null);
+  const wordsRequest = useRef<string>("");
   const [extra, setExtra] = useState("");
   const [needPick, setNeedPick] = useState(false);
   const [drafts, setDrafts] = useState<Drafts | null>(null);
@@ -186,6 +189,7 @@ export function ReviewFlow({ business, source, preview = false }: Props) {
     } catch {}
     clearTimeout(advance.current);
     if (!go) return;
+    if (n >= 4 && business.hasGoogleLink) loadWords(n);
     advance.current = setTimeout(() => {
       flush();
       show(n >= 4 && business.hasGoogleLink ? "picks" : "note", { push: true });
@@ -214,11 +218,36 @@ export function ReviewFlow({ business, source, preview = false }: Props) {
     setPicks((now) => (now.includes(key) ? now.filter((k) => k !== key) : now.length < MAX_PICKS ? [...now, key] : now));
   }
 
-  const words = (list: string[], kind: "g" | "b") => picks.filter((p) => p[0] === kind).map((p) => list[Number(p.slice(1))]).filter(Boolean);
+  const wordsFor = `${lang}:${rating <= 3 ? "low" : "high"}`;
+  const tapped = (kind: "g" | "b") => {
+    const list = (kind === "g" ? words?.good : words?.bad) ?? [];
+    return words?.key === wordsFor ? picks.filter((p) => p[0] === kind).map((p) => list[Number(p.slice(1))]).filter(Boolean) : [];
+  };
+
+  // Asks for the words once per language and rating band; a newer ask wins.
+  function loadWords(stars: number) {
+    const key = `${lang}:${stars <= 3 ? "low" : "high"}`;
+    if (words?.key === key || wordsRequest.current === key) return;
+    wordsRequest.current = key;
+    fetch("/api/review-picks", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ slug: business.slug, rating: stars, lang }),
+    })
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
+      .then((data: { picks: { good: string[]; bad: string[] } }) => {
+        if (wordsRequest.current !== key) return;
+        setPicks([]);
+        setWords({ key, ...data.picks });
+      })
+      .catch(() => {
+        if (wordsRequest.current === key) wordsRequest.current = "";
+      });
+  }
 
   async function write(again = false) {
-    const good = words(business.chips[lang], "g");
-    const bad = happy ? [] : words(business.issues[lang], "b");
+    const good = tapped("g");
+    const bad = happy ? [] : tapped("b");
     if (!good.length && !bad.length && !extra.trim()) {
       setNeedPick(true);
       return;
@@ -414,8 +443,9 @@ export function ReviewFlow({ business, source, preview = false }: Props) {
           <PicksStep
             t={t}
             rtl={rtl}
-            chips={business.chips[lang]}
-            issues={happy ? null : business.issues[lang]}
+            low={!happy}
+            chips={wordsFor === words?.key ? words.good : null}
+            issues={wordsFor === words?.key ? words.bad : null}
             picks={picks}
             extra={extra}
             needPick={needPick}
@@ -463,7 +493,10 @@ export function ReviewFlow({ business, source, preview = false }: Props) {
             source={source}
             showGoogle={business.hasGoogleLink}
             onSent={noteSent}
-            onGoogle={() => show("picks", { push: true })}
+            onGoogle={() => {
+              loadWords(rating);
+              show("picks", { push: true });
+            }}
             bar={bar(2, 2)}
           />
         )}

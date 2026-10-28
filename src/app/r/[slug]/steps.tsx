@@ -54,6 +54,7 @@ function StepTitle({ title, hint, rtl, spare }: { title: string; hint?: string; 
 export function PicksStep({
   t,
   rtl,
+  low,
   chips,
   issues,
   picks,
@@ -66,7 +67,8 @@ export function PicksStep({
 }: {
   t: Copy;
   rtl: boolean;
-  chips: string[];
+  low: boolean; // 1 to 3 stars: "could be better" words as well
+  chips: string[] | null; // null while the AI makes them
   issues: string[] | null;
   picks: string[];
   extra: string;
@@ -77,16 +79,16 @@ export function PicksStep({
   bar: React.ReactNode;
 }) {
   // With "could be better" picks as well, fewer of each, so the screen still fits.
-  const good = issues ? chips.slice(0, 4) : chips.slice(0, 6);
+  const good = chips ? (low ? chips.slice(0, 4) : chips.slice(0, 6)) : null;
   return (
     <div className="flex flex-1 flex-col">
       {bar}
       <StepTitle title={t.write.title} hint={t.write.hint} rtl={rtl} />
-      <ChipGroup label={t.write.title} list={good} kind="g" picks={picks} onToggle={onToggle} />
-      {issues && (
+      {good ? <ChipGroup label={t.write.title} list={good} kind="g" picks={picks} onToggle={onToggle} /> : <ChipsLoading count={low ? 4 : 6} top />}
+      {low && (
         <>
           <p className="rv-label mt-5">{t.write.issues}</p>
-          <ChipGroup label={t.write.issues} list={issues.slice(0, 4)} kind="b" picks={picks} onToggle={onToggle} />
+          {issues ? <ChipGroup label={t.write.issues} list={issues.slice(0, 4)} kind="b" picks={picks} onToggle={onToggle} /> : <ChipsLoading count={4} />}
         </>
       )}
       <label htmlFor="rv-extra" className="rv-label mt-6">
@@ -114,6 +116,18 @@ export function PicksStep({
           {t.write.go}
         </button>
       </div>
+    </div>
+  );
+}
+
+// While the AI makes the words: pill-shaped placeholders in their place, shimmering.
+const LOADING_WIDTHS = [128, 112, 140, 96, 120, 104];
+function ChipsLoading({ count, top = false }: { count: number; top?: boolean }) {
+  return (
+    <div className={`flex flex-wrap gap-2 ${top ? "mt-4" : ""}`} aria-busy="true" aria-hidden="true">
+      {LOADING_WIDTHS.slice(0, count).map((w, i) => (
+        <span key={i} className="rv-chip-ghost" style={{ width: w, "--i": i } as React.CSSProperties} />
+      ))}
     </div>
   );
 }
@@ -427,9 +441,8 @@ export function NoteStep({
 
 export function ThanksStep({ t, rtl, kind, name, onAgain }: { t: Copy; rtl: boolean; kind: "google" | "note"; name: string; onAgain: () => void }) {
   return (
-    <div className="flex flex-1 flex-col items-center justify-center py-8 text-center" role="status">
+    <div className="flex flex-1 flex-col items-center justify-center pb-14 text-center" role="status">
       <span className="rv-done" aria-hidden="true">
-        <span className="rv-halo" />
         <span className="rv-halo" />
         <span className="rv-halo" />
         <span className="rv-glass rv-done-disc">
@@ -439,10 +452,15 @@ export function ThanksStep({ t, rtl, kind, name, onAgain }: { t: Copy; rtl: bool
           </svg>
         </span>
       </span>
-      <h2 className={`rv-done-title mt-10 ${rtl ? "leading-[1.6]" : ""}`}>{t.done.title}</h2>
-      <p className="rv-done-text mx-auto mt-3 max-w-[30ch] text-[1.05rem] leading-relaxed text-(--rv-fg2)">{kind === "google" ? t.done.google(name) : t.done.note}</p>
+      <h2 className={`rv-done-title mt-9 ${rtl ? "leading-[1.6]" : ""}`}>{t.done.title}</h2>
+      <p className="rv-done-text mt-3 max-w-[26ch] text-[1.05rem] leading-relaxed text-(--rv-fg2)">{kind === "google" ? t.done.google(name) : t.done.note}</p>
+      <p className="rv-done-sign mt-6 flex items-center gap-2 text-sm text-(--rv-fg3)">
+        <span aria-hidden="true" className="h-px w-6 bg-(--rv-line)" />
+        {name}
+        <span aria-hidden="true" className="h-px w-6 bg-(--rv-line)" />
+      </p>
       {kind === "google" && (
-        <button type="button" onClick={onAgain} className="rv-done-text btn btn-ghost mt-8 min-h-12 px-5 text-sm">
+        <button type="button" onClick={onAgain} className="rv-done-sign btn btn-ghost mt-8 min-h-12 px-5 text-sm">
           <GoogleMark />
           {t.done.again}
         </button>

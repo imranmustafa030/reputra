@@ -1313,20 +1313,50 @@ body:has(.rv-page[data-theme="light"]) {
   width: 136px;
   height: 136px;
 }
+/* a warm light pooled behind the disc */
+.rv-done::before {
+  content: "";
+  position: absolute;
+  inset: -44px;
+  border-radius: 999px;
+  background: radial-gradient(closest-side, oklch(81% 0.165 76 / 0.3), transparent);
+}
 .rv-done-disc {
   position: relative;
   display: grid;
   place-items: center;
-  width: 100px;
-  height: 100px;
+  width: 96px;
+  height: 96px;
   border-radius: 999px;
+  color: var(--color-amber);
 }
 .rv-halo {
   position: absolute;
-  inset: 18px;
+  inset: 20px;
   border-radius: 999px;
-  border: 1.5px solid oklch(81% 0.165 76 / 0.6);
+  border: 1px solid oklch(81% 0.165 76 / 0.55);
   opacity: 0;
+}
+.rv-done-text {
+  text-wrap: balance;
+}
+/* the shimmering pills while the AI makes the words */
+.rv-chip-ghost {
+  display: block;
+  height: 42px;
+  border-radius: 999px;
+  border: 1px solid var(--rv-glass-line);
+  background: linear-gradient(90deg, var(--rv-star-off) 0%, var(--rv-line) 50%, var(--rv-star-off) 100%) 0 0 / 200% 100%;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .rv-chip-ghost {
+    animation: rv-shimmer 1.4s linear infinite;
+    animation-delay: calc(var(--i, 0) * 80ms);
+  }
+  .rv-done-sign {
+    animation: rise 700ms var(--ease-out-expo) 560ms both;
+    --rise: 10px;
+  }
 }
 .rv-done-title {
   font-size: 2.75rem;

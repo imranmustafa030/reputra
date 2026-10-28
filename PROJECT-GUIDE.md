@@ -87,7 +87,7 @@ The top bar has **Log in** (for existing customers) and **Get started**.
 - **4 or 5 stars:** straight to "What stood out?" (simple tap-to-pick words in the customer's language, plus an optional line). We write it up three ways (very short, short, a bit longer) from their picks only; they pick one, can change any word, and one tap copies it and opens Google's review box to paste. The writing is done by Google's free Gemini AI; without it, simple ready-made sentences are used, so it always works.
 - **1 to 3 stars:** straight to a private note to the owner. Under it, a quieter line still offers Google ("Rather post it on Google?"), which leads to the same writing help with "could be better" picks.
 - Then a thank-you screen (coming back from Google lands on it too, with "copy again").
-- The picks come from the owner's "About your business" line (Settings, also asked right after the first payment). Without it, the usual picks for the type of business are shown.
+- The picks are made by AI on the spot for each business, in the customer's language and for their rating: mostly general (staff, speed, cleanliness, price, the place), and a dish or product only when the owner's "About your business" line (Settings, also asked right after the first payment) clearly says they offer it. Kept for 30 minutes per business; if the AI is down, a few general picks are used.
 - The private note: message (required), name and phone (optional, for a reply).
 - If the team pauses an account, its review page shows "not found".
 

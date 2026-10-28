@@ -4,7 +4,6 @@ import { db } from "./db";
 import { Business } from "@/models/Business";
 import { Tag, type TagKind } from "@/models/Tag";
 import { isCode } from "./tags";
-import { defaultChips, ISSUES } from "./review-ai";
 
 export const businessTag = (slug: string) => `business:${slug}`;
 
@@ -34,17 +33,14 @@ export async function getPublicEntry(code: string) {
   await db();
   const tag = await Tag.findOne({ code }).select("business kind status").lean();
   if (!tag) return null;
-  const business = await Business.findById(tag.business).select("name slug googleReviewUrl status introAnimation category reviewChips").lean();
+  const business = await Business.findById(tag.business).select("name slug googleReviewUrl status introAnimation").lean();
   if (!business || business.status === "suspended") return null;
   cacheTag(businessTag(business.slug));
-  // The "what stood out" picks: made from the owner's description, else the usual ones for the type.
-  const saved = business.reviewChips;
-  const chips = saved?.en?.length && saved.roman?.length && saved.ur?.length ? { en: saved.en, roman: saved.roman, ur: saved.ur } : defaultChips(business.category);
   return {
     code,
     kind: tag.kind as TagKind,
     off: tag.status === "off",
-    business: { name: business.name, slug: business.slug, hasGoogleLink: Boolean(business.googleReviewUrl), intro: business.introAnimation !== false, chips, issues: ISSUES },
+    business: { name: business.name, slug: business.slug, hasGoogleLink: Boolean(business.googleReviewUrl), intro: business.introAnimation !== false },
   };
 }
 

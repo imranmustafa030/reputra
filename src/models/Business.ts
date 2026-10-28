@@ -34,10 +34,6 @@ const businessSchema = new Schema(
     // out?" picks from it, and the AI that drafts reviews uses it for context.
     description: { type: String, default: "", trim: true, maxlength: 400 },
     // Those picks, made from the description when it's saved, in each language of the review page.
-    reviewChips: {
-      type: { _id: false, en: [String], roman: [String], ur: [String] },
-      default: null,
-    },
     // The review page's short opening animation; the owner can turn it off in Settings.
     introAnimation: { type: Boolean, default: true },
     // Suspended by the Reputra team: the dashboard locks and the review page stops working.
