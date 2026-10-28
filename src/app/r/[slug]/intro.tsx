@@ -61,7 +61,7 @@ function set(p){d.dataset.rvIntro=p}
 function stop(){v.pause();while(v.firstChild)v.removeChild(v.firstChild);v.removeAttribute("src");v.load()}
 var n=navigator.connection||{},why="";
 try{why=${enabled ? '""' : '"turned off in Settings"'}||(matchMedia("(prefers-reduced-motion: reduce)").matches?"reduced motion":"")||(n.saveData?"data saver":"")${force ? "" : `||(/2g|3g/.test(n.effectiveType||"")?"slow connection ("+n.effectiveType+")":"")||(sessionStorage.getItem(K)?"already played in this tab":"")`};
-if(why){set("off");d.dataset.rvIntroWhy=why;stop();return}sessionStorage.setItem(K,"1")}catch(e){}
+if(why){set("off");d.dataset.rvIntroWhy=why;stop();t.remove();return}sessionStorage.setItem(K,"1")}catch(e){}
 f.appendChild(t);
 try{var l=localStorage.getItem("reputra:lang"),T=${JSON.stringify(thanks)};if(l&&T[l]){t.querySelector(".rv-film-thanks").textContent=T[l];if(l==="ur")t.dir="rtl"}}catch(e){}
 var phase="on",started=v.currentTime>0;set("on");
