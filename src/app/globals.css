@@ -749,6 +749,14 @@
   background: var(--color-amber);
   opacity: 0;
 }
+/* the private note: appears at full size at once (so a phone can scroll to it and focus it
+   inside the tap), fading and rising into place */
+@media (prefers-reduced-motion: no-preference) {
+  .rv-note-in {
+    animation: rise 420ms var(--ease-out-expo) both;
+    --rise: 10px;
+  }
+}
 .rv-reveal {
   display: grid;
   grid-template-rows: 0fr;
