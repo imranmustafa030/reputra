@@ -12,6 +12,7 @@ export type Copy = {
   hint: string;
   labels: [string, string, string, string, string];
   starName: (n: number) => string;
+  skip: string;
   form: { message: string; name: string; phone: string; optional: string; send: string; sending: string; only: string };
   noGoogle: string;
   // Writing the Google review: the customer taps what stood out and we write it up three ways.
@@ -53,6 +54,7 @@ export const COPY: Record<Lang, Copy> = {
     hint: "Tap a star",
     labels: ["Bad", "Not good", "Okay", "Good", "Excellent"],
     starName: (n) => `${n} ${n === 1 ? "star" : "stars"}`,
+    skip: "Go straight to Google",
     form: {
       message: "What should the owner know?",
       name: "Your name",
@@ -88,7 +90,7 @@ export const COPY: Record<Lang, Copy> = {
       extraPh: "e.g. Loved the welcome",
     },
     note: { title: "What went wrong?", title3: "What could be better?", titleHappy: "Send the owner a note", orGoogle: "Rather post it on Google?", googleLink: "Write a Google review", reply: "Want a reply? Add your name and phone", need: "Write a few words first, so the owner knows what happened." },
-    done: { title: "Thank you!", google: (name) => `Your review helps other people find ${name}. It means a lot.`, note: "Your message has reached the owner. They’ll look into it soon and work to put it right.", again: "Copy again & open Google" },
+    done: { title: "Thank you!", google: (name) => `Your review helps others find ${name}.`, note: "It’s with the owner. We’ll put it right.", again: "Copy again & open Google" },
     stepOf: (a, b) => `Step ${a} of ${b}`,
   },
   roman: {
@@ -97,6 +99,7 @@ export const COPY: Record<Lang, Copy> = {
     hint: "Star par tap karein",
     labels: ["Bura", "Theek nahin", "Theek tha", "Acha", "Bohat acha"],
     starName: (n) => `${n} star`,
+    skip: "Seedha Google par jayein",
     form: {
       message: "Owner ko kya batana chahte hain?",
       name: "Aap ka naam",
@@ -132,7 +135,7 @@ export const COPY: Record<Lang, Copy> = {
       extraPh: "Jaise: welcome bohat acha tha",
     },
     note: { title: "Kya ghalat hua?", title3: "Kya behtar ho sakta tha?", titleHappy: "Owner ko message bhejein", orGoogle: "Google par likhna chahte hain?", googleLink: "Google review dein", reply: "Jawab chahiye? Apna naam aur phone dein", need: "Pehle kuch alfaaz likhein, taake owner ko pata chale kya hua." },
-    done: { title: "Shukriya!", google: (name) => `Aap ka review doosron ko ${name} tak pohanchne mein madad karta hai. Bohat shukriya.`, note: "Aap ka message owner tak pohanch gaya. Woh is par jald ghaur karenge aur isay theek karne ki poori koshish karenge.", again: "Dobara copy karein aur Google kholein" },
+    done: { title: "Shukriya!", google: (name) => `Aap ka review doosron ko ${name} tak layega.`, note: "Owner tak pohanch gaya. Hum isay theek karenge.", again: "Dobara copy karein aur Google kholein" },
     stepOf: (a, b) => `Step ${a} / ${b}`,
   },
   ur: {
@@ -141,6 +144,7 @@ export const COPY: Record<Lang, Copy> = {
     hint: "ستارے پر ٹیپ کریں",
     labels: ["برا", "ٹھیک نہیں", "ٹھیک تھا", "اچھا", "بہت اچھا"],
     starName: (n) => `${n} ستارے`,
+    skip: "سیدھا گوگل پر جائیں",
     form: {
       message: "آپ مالک کو کیا بتانا چاہتے ہیں؟",
       name: "آپ کا نام",
@@ -176,7 +180,7 @@ export const COPY: Record<Lang, Copy> = {
       extraPh: "جیسے: استقبال بہت اچھا تھا",
     },
     note: { title: "کیا غلط ہوا؟", title3: "کیا بہتر ہو سکتا تھا؟", titleHappy: "مالک کو پیغام بھیجیں", orGoogle: "گوگل پر لکھنا چاہتے ہیں؟", googleLink: "گوگل ریویو دیں", reply: "جواب چاہیے؟ اپنا نام اور فون دیں", need: "پہلے چند الفاظ لکھیں، تاکہ مالک کو معلوم ہو کیا ہوا۔" },
-    done: { title: "شکریہ!", google: (name) => `آپ کا ریویو دوسروں کو ${name} تک پہنچنے میں مدد دیتا ہے۔ بہت شکریہ۔`, note: "آپ کا پیغام مالک تک پہنچ گیا۔ وہ اس پر جلد غور کریں گے اور اسے ٹھیک کرنے کی پوری کوشش کریں گے۔", again: "دوبارہ کاپی کریں اور گوگل کھولیں" },
+    done: { title: "شکریہ!", google: (name) => `آپ کا ریویو دوسروں کو ${name} تک لائے گا۔`, note: "مالک تک پہنچ گیا۔ ہم اسے ٹھیک کریں گے۔", again: "دوبارہ کاپی کریں اور گوگل کھولیں" },
     stepOf: (a, b) => `مرحلہ ${a} از ${b}`,
   },
 };
