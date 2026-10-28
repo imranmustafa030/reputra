@@ -82,7 +82,7 @@ The top bar has **Log in** (for existing customers) and **Get started**.
 ### 4.2 Customer side: the review page ✅
 
 - Opens from the QR code, the NFC tap or the WhatsApp link. No app, no login.
-- Shows "Thank you for visiting **[Business name]**" and five stars, in English, Roman Urdu or Urdu.
+- Shows "Thank you for visiting **[Business name]**" and five stars, in Roman Urdu (the default), English or Urdu.
 - Every step is one full phone screen, no scrolling, and the phone's back gesture goes back one step. The language switch is only on the stars screen.
 - **4 or 5 stars:** straight to "What stood out?" (simple tap-to-pick words in the customer's language, plus an optional line). We write it up three ways (very short, short, a bit longer) from their picks only; they pick one, can change any word, and one tap copies it and opens Google's review box to paste. The writing is done by Google's free Gemini AI; without it, simple ready-made sentences are used, so it always works.
 - **1 to 3 stars:** straight to a private note to the owner. Under it, a quieter line still offers Google ("Rather post it on Google?"), which leads to the same writing help with "could be better" picks.

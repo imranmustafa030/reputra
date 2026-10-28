@@ -78,7 +78,7 @@ v.muted=true;var p=v.play();if(p&&p.catch)p.catch(fail);
 
   const html = enabled
     ? `<div class="rv-film-title">` +
-      `<span class="rv-film-line"><span class="rv-film-thanks">${esc(thanks.en)}</span></span>` +
+      `<span class="rv-film-line"><span class="rv-film-thanks">${esc(thanks.roman)}</span></span>` +
       `<span class="rv-film-line"><span class="rv-film-name" style="--len:${Math.max(name.length, 8)}">${esc(name)}</span></span>` +
       `</div><script>${controller}</script>`
     : `<i hidden></i><script>${controller}</script>`;

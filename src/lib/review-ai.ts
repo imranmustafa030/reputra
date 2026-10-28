@@ -21,10 +21,10 @@ const THINKING = () => process.env.GEMINI_THINKING || "minimal";
 const TIMEOUT_MS = 9000;
 
 const LANGUAGE: Record<Lang, string> = {
-  en: "English. Plain, natural, everyday English as a customer in Pakistan would write it.",
+  en: "Very simple, everyday English: short, common words and short sentences, the way a customer who doesn't write much English would put it.",
   roman:
-    "Roman Urdu: Urdu written in the Latin alphabet, the way people in Pakistan type on WhatsApp (e.g. \"Bohat acha khana tha, staff bhi friendly tha\"). Mix in common English words where people naturally do. Never use Urdu script.",
-  ur: "Urdu in Urdu script (Nastaliq/Naskh letters), simple everyday wording. Never use the Latin alphabet except for a brand name.",
+    "Roman Urdu: Urdu written in the Latin alphabet, the way people in Pakistan type on WhatsApp (e.g. \"Khana bohat mazedar tha, staff ka rawaiya bhi acha tha\"). Use Urdu words; keep only the English words people really say (coffee, staff, service). Never use Urdu script.",
+  ur: "Simple spoken Urdu in Urdu script, the plain words people use every day (no formal or bookish Urdu), with real Urdu words, not English words written in Urdu letters (say عملہ not اسٹاف, تجربہ not ایکسپیرینس, ماحول not ایمبیئنس). Only a name with no Urdu word may stay. Simple everyday Urdu. Never use the Latin alphabet except for the business name.",
 };
 
 // The voice of the drafts. Kept strict on honesty: Google removes reviews that don't reflect the
@@ -42,7 +42,7 @@ Style rules:
 - Sound like a real person, not marketing. Simple words. No hashtags, no emojis, no exclamation marks in a row, at most one exclamation mark in total.
 - Mention the business name at most once, and not in the very short version.
 - Write the business name exactly as given, in its own letters; never transliterate it into another script. In Urdu script, leave the name out.
-- In Urdu and Roman Urdu, the customer may be a man or a woman: never use first-person verbs that show gender (gaya/gayi, aaunga/aaungi, karunga, گیا/گئی, کروں گا/گی, آؤں گا/گی). Use neutral forms: "hamara visit acha raha", "dobara zaroor aana hai", "yahan aa kar acha laga", "ہمارا وزٹ اچھا رہا", "دوبارہ ضرور آنا ہے", "یہاں آ کر اچھا لگا".
+- In Urdu and Roman Urdu, the customer may be a man or a woman: never use first-person verbs that show gender (gaya/gayi, aaunga/aaungi, karunga, گیا/گئی, کروں گا/گی, آؤں گا/گی). Use neutral forms: "hamara visit acha raha", "dobara zaroor aana hai", "yahan aa kar acha laga", "یہاں آ کر اچھا لگا", "دوبارہ ضرور آنا ہے", "یہاں آ کر اچھا لگا".
 - Each of the three versions must open differently and use different wording, not be the same sentence made longer.
 - Lengths: very_short is 3 to 10 words. short is 12 to 25 words, one or two sentences. medium is 28 to 55 words, two to four sentences.
 
@@ -57,13 +57,14 @@ const DRAFTS_SCHEMA = {
 const CHIPS_SYSTEM = `You write short tap-to-pick options for a review page of a local business in Pakistan. Customers tap up to three to say what stood out in their visit.
 
 Rules:
-- 6 options. Each is a short, natural phrase of 1 to 3 simple words, the way a customer would say what they liked, e.g.
-  - en: "Great coffee", "Friendly staff", "Quick service", "Clean place"
-  - roman: "Coffee zabardast", "Staff friendly", "Service jaldi", "Jagah saaf"
-  - ur: "زبردست کافی", "خوش اخلاق عملہ", "جلدی سروس", "صاف جگہ"
-- Choose the 6 that matter most for THIS business: at most 2 about a dish or product named in its description, the rest about staff, speed, cleanliness, value or atmosphere. Never two options that mean the same thing.
+- 6 options. Each one says WHAT was good, not just a thing: a thing plus how it was, in 2 to 4 simple words. "Cold brew" or "Quiet corners" alone mean nothing; "Coffee was great" and "Calm place to sit" do. Examples:
+  - en (the simplest English, short common words only): "Tasty cold coffee", "Kind staff", "Calm place", "Good wifi", "Clean place"
+  - roman (Roman Urdu as typed on WhatsApp): "Thandi coffee mazedar thi", "Staff ka rawaiya acha", "Sukoon wali jagah", "Wifi acha chalta hai"
+  - ur (simple spoken Urdu that everyone understands, the same plain words as the Roman Urdu but in Urdu letters; no formal or bookish words, and never English written in Urdu letters): "ٹھنڈی کافی مزیدار تھی", "عملہ اچھا تھا", "سکون والی جگہ", "انٹرنیٹ اچھا چلتا ہے"
+- A dish or product always comes with how it was ("Tasty cold coffee", never just "Cold coffee"; "Rolls taaza the", never just "Fresh rolls" in Roman Urdu).
+- Choose the 6 that matter most for THIS business: at most 2 about a dish or product named in its description (in plain words: "cold brew" becomes "cold coffee" if that is simpler), the rest about staff, speed, cleanliness, price or the place. Never two options that mean the same thing.
 - Positive or neutral only. No superlatives like "best ever", no prices, no emojis.
-- The same 6 options in three languages, in the same order: en is plain English; roman is Roman Urdu as people type it on WhatsApp in Pakistan (common English words like coffee, staff, service, wifi stay as they are); ur is Urdu script. Never a word-for-word translation that sounds odd: if a phrase sounds strange, use a simpler common one.
+- The same 6 options in all three languages, in the same order, each one natural in its own language, never a word-for-word translation.
 
 Return JSON only, matching the schema.`;
 
@@ -133,7 +134,9 @@ export async function writeDrafts(input: DraftInput): Promise<{ drafts: Drafts; 
     .filter(Boolean)
     .join("\n");
   const out = await gemini<{ very_short?: string; short?: string; medium?: string }>(DRAFTS_SYSTEM, prompt, DRAFTS_SCHEMA, 0.95);
-  const drafts = out && { veryShort: clean(out.very_short, 120), short: clean(out.short, 260), medium: clean(out.medium, 480) };
+  // Urdu ends its sentences with "۔", which the model often swaps for a Latin full stop.
+  const stops = (t: string) => (input.lang === "ur" ? t.replace(/\.(\s|$)/g, "۔$1") : t);
+  const drafts = out && { veryShort: stops(clean(out.very_short, 120)), short: stops(clean(out.short, 260)), medium: stops(clean(out.medium, 480)) };
   if (drafts && [drafts.veryShort, drafts.short, drafts.medium].every((d) => d && rightScript(d, input.lang))) return { drafts, ai: true };
   return { drafts: templateDrafts(input), ai: false };
 }
@@ -156,7 +159,7 @@ export async function suggestChips(input: { name: string; category: Category; de
     0.5,
   );
   if (!out) return null;
-  const list = (v: unknown) => (Array.isArray(v) ? v.map((x) => clean(x, 28)).filter(Boolean).slice(0, 6) : []);
+  const list = (v: unknown) => (Array.isArray(v) ? v.map((x) => clean(x, 32)).filter(Boolean).slice(0, 6) : []);
   const chips = { en: list(out.en), roman: list(out.roman), ur: list(out.ur) };
   return chips.en.length >= 4 && chips.roman.length >= 4 && chips.ur.length >= 4 ? chips : null;
 }
@@ -166,83 +169,91 @@ export async function suggestChips(input: { name: string; category: Category; de
 // "Could be better", offered alongside the picks when a customer gives 1 to 3 stars, so an
 // unhappy customer's review can say what went wrong instead of only what went right.
 export const ISSUES: Chips = {
-  en: ["Slow service", "Long wait", "Not clean", "Too pricey", "Unfriendly staff"],
-  roman: ["Service slow thi", "Lamba intezar", "Safai kam thi", "Mehnga laga", "Staff ka rawayya"],
-  ur: ["سروس سست تھی", "لمبا انتظار", "صفائی کم تھی", "مہنگا لگا", "عملے کا رویہ"],
+  en: ["Slow service", "Long wait", "Not clean", "Too costly", "Staff not polite"],
+  roman: ["Service slow thi", "Intezar lamba tha", "Safai nahin thi", "Bohat mehnga tha", "Staff ka rawaiya theek nahin"],
+  ur: ["بہت دیر لگی", "انتظار لمبا تھا", "صفائی نہیں تھی", "بہت مہنگا تھا", "عملے کا رویہ ٹھیک نہیں"],
 };
 
-// Picks that suit each kind of business, until the owner's description gives better ones.
-const COMMON: Chips = {
-  en: ["Friendly staff", "Quick service", "Clean place", "Good value"],
-  roman: ["Friendly staff", "Jaldi service", "Saaf suthri jagah", "Paise wasool"],
-  ur: ["خوش اخلاق عملہ", "جلدی سروس", "صاف ستھری جگہ", "مناسب قیمت"],
-};
-const BY_CATEGORY: Partial<Record<Category, Chips>> = {
-  restaurant: { en: ["Tasty food", "Good portions", "Nice atmosphere"], roman: ["Mazedar khana", "Achi quantity", "Acha mahol"], ur: ["مزیدار کھانا", "اچھی مقدار", "اچھا ماحول"] },
-  cafe: { en: ["Great coffee", "Cosy place", "Fresh food"], roman: ["Zabardast coffee", "Cosy jagah", "Taaza khana"], ur: ["زبردست کافی", "پرسکون جگہ", "تازہ کھانا"] },
-  salon: { en: ["Great result", "Skilled stylist", "Relaxing visit"], roman: ["Zabardast result", "Mahir stylist", "Sukoon wala visit"], ur: ["زبردست نتیجہ", "ماہر اسٹائلسٹ", "پرسکون وزٹ"] },
-  clinic: { en: ["Caring doctor", "Explained clearly", "Short wait"], roman: ["Hamdard doctor", "Achi tarah samjhaya", "Kam intezar"], ur: ["ہمدرد ڈاکٹر", "اچھی طرح سمجھایا", "کم انتظار"] },
-  gym: { en: ["Good equipment", "Helpful trainers", "Good vibe"], roman: ["Acha equipment", "Madadgar trainers", "Acha mahol"], ur: ["اچھا سامان", "مددگار ٹرینر", "اچھا ماحول"] },
-  shop: { en: ["Good variety", "Helpful staff", "Fair prices"], roman: ["Achi variety", "Madadgar staff", "Munasib qeemat"], ur: ["اچھی ورائٹی", "مددگار عملہ", "مناسب قیمتیں"] },
-  hotel: { en: ["Comfortable room", "Helpful staff", "Great location"], roman: ["Aramdeh kamra", "Madadgar staff", "Achi location"], ur: ["آرام دہ کمرہ", "مددگار عملہ", "اچھی جگہ"] },
+// Picks for each kind of business, until the owner's description gives better ones. Each says
+// what was good, in the simplest words of each language.
+const BY_CATEGORY: Record<Category, Chips> = {
+  restaurant: {
+    en: ["Tasty food", "Fresh food", "Food came fast", "Kind staff", "Clean place", "Fair price"],
+    roman: ["Khana mazedar tha", "Khana taaza tha", "Khana jaldi aaya", "Staff ka rawaiya acha", "Jagah saaf thi", "Qeemat munasib"],
+    ur: ["کھانا مزیدار تھا", "کھانا تازہ تھا", "کھانا جلدی آیا", "عملہ اچھا تھا", "جگہ صاف تھی", "قیمت مناسب"],
+  },
+  cafe: {
+    en: ["Great coffee", "Tasty food", "Calm place", "Kind staff", "Clean place", "Fair price"],
+    roman: ["Coffee zabardast thi", "Khana mazedar tha", "Sukoon wali jagah", "Staff ka rawaiya acha", "Jagah saaf thi", "Qeemat munasib"],
+    ur: ["کافی زبردست تھی", "کھانا مزیدار تھا", "سکون والی جگہ", "عملہ اچھا تھا", "جگہ صاف تھی", "قیمت مناسب"],
+  },
+  salon: {
+    en: ["Great result", "Skilled staff", "Very relaxing", "No long wait", "Clean place", "Fair price"],
+    roman: ["Result zabardast tha", "Staff mahir tha", "Bohat sukoon mila", "Intezar nahin karna para", "Jagah saaf thi", "Qeemat munasib"],
+    ur: ["نتیجہ زبردست تھا", "عملہ ماہر تھا", "بہت سکون ملا", "انتظار نہیں کرنا پڑا", "جگہ صاف تھی", "قیمت مناسب"],
+  },
+  clinic: {
+    en: ["Caring doctor", "Explained well", "Short wait", "Kind staff", "Clean place", "Fair fee"],
+    roman: ["Doctor hamdard the", "Achi tarah samjhaya", "Intezar kam tha", "Staff ka rawaiya acha", "Jagah saaf thi", "Fees munasib"],
+    ur: ["ڈاکٹر ہمدرد تھے", "اچھے سے سمجھایا", "انتظار کم تھا", "عملہ اچھا تھا", "جگہ صاف تھی", "فیس مناسب"],
+  },
+  gym: {
+    en: ["Good machines", "Helpful trainers", "Good vibe", "Clean place", "Not crowded", "Fair fee"],
+    roman: ["Machines achi hain", "Trainers madadgar hain", "Mahol acha hai", "Jagah saaf hai", "Rush nahin hota", "Fees munasib"],
+    ur: ["مشینیں اچھی ہیں", "ٹرینر مددگار ہیں", "ماحول اچھا ہے", "جگہ صاف ہے", "رش نہیں ہوتا", "فیس مناسب"],
+  },
+  shop: {
+    en: ["Lots of choice", "Helpful staff", "Good quality", "Fair price", "Quick service", "Clean shop"],
+    roman: ["Cheezein bohat hain", "Staff madadgar tha", "Achi quality", "Qeemat munasib", "Kaam jaldi hua", "Dukaan saaf thi"],
+    ur: ["بہت چیزیں ملیں", "عملہ مددگار تھا", "چیزیں اچھی ہیں", "قیمت مناسب", "کام جلدی ہوا", "دکان صاف تھی"],
+  },
+  hotel: {
+    en: ["Comfy room", "Clean room", "Helpful staff", "Good location", "Quiet at night", "Fair price"],
+    roman: ["Kamra aramdeh tha", "Kamra saaf tha", "Staff madadgar tha", "Location achi hai", "Raat ko sukoon tha", "Qeemat munasib"],
+    ur: ["کمرہ آرام دہ تھا", "کمرہ صاف تھا", "عملہ مددگار تھا", "جگہ اچھی ہے", "رات کو سکون تھا", "قیمت مناسب"],
+  },
+  other: {
+    en: ["Kind staff", "Quick service", "Good work", "Clean place", "Fair price", "Easy to find"],
+    roman: ["Staff ka rawaiya acha", "Kaam jaldi hua", "Kaam acha tha", "Jagah saaf thi", "Qeemat munasib", "Jagah aasani se mili"],
+    ur: ["عملہ اچھا تھا", "کام جلدی ہوا", "کام اچھا تھا", "جگہ صاف تھی", "قیمت مناسب", "جگہ آسانی سے ملی"],
+  },
 };
 
 export function defaultChips(category: Category): Chips {
-  const extra = BY_CATEGORY[category];
-  return {
-    en: [...(extra?.en ?? []), ...COMMON.en].slice(0, 6),
-    roman: [...(extra?.roman ?? []), ...COMMON.roman].slice(0, 6),
-    ur: [...(extra?.ur ?? []), ...COMMON.ur].slice(0, 6),
-  };
+  return BY_CATEGORY[category] ?? BY_CATEGORY.other;
 }
 
-// Plain drafts from the picks, when the AI isn't available. Honest and varied enough to read as
-// a person's words; the customer can still edit before copying.
+// Plain drafts from the picks, when the AI isn't available. The picks are short statements
+// ("Khana mazedar tha"), so they are joined as they are; the customer can still edit.
 export function templateDrafts({ name, rating, picks, issues, note, lang }: DraftInput): Drafts {
-  const p = picks.slice(0, 3);
-  const bad = issues.slice(0, 3);
-  const list = (items: string[], and: string) => (items.length <= 1 ? items.join("") : `${items.slice(0, -1).join(", ")} ${and} ${items.at(-1)}`);
   const good = rating >= 4;
+  const ur = lang === "ur";
+  const stop = ur ? "۔" : ".";
+  const join = (items: string[]) =>
+    items
+      .slice(0, 3)
+      .map((x, i) => (i && !ur ? x.charAt(0).toLowerCase() + x.slice(1) : x))
+      .join(ur ? "، " : ", ");
   const cap = (x: string) => x.charAt(0).toUpperCase() + x.slice(1);
-  const extra = note ? ` ${cap(note.replace(/[.!?۔]*$/, lang === "ur" ? "۔" : "."))}` : "";
-  if (lang === "roman") {
-    const l = list(p.map((x, i) => (i ? x.toLowerCase() : x)), "aur");
-    return good
-      ? {
-          veryShort: p.length ? `${p[0]}, bohat acha laga.` : "Bohat acha experience raha.",
-          short: p.length ? `${name} ka visit acha raha. ${l} khaas tor par pasand aaya.` : `${name} ka visit acha raha, dobara zaroor aayenge.`,
-          medium: `Hamara visit kaafi acha raha.${p.length ? ` ${l} sab se zyada pasand aaya.` : ""}${extra} Dobara zaroor aayenge.`,
-        }
-      : {
-          veryShort: rating === 3 ? "Theek tha, behtar ho sakta hai." : "Experience acha nahin raha.",
-          short: `${name} ka visit ${rating === 3 ? "theek tha" : "umeed ke mutabiq nahin tha"}.${bad.length ? ` Masla: ${bad[0].toLowerCase()}.` : p.length ? ` ${l} acha tha.` : ""}`,
-          medium: `Visit ${rating === 3 ? "theek raha, lekin kuch cheezein behtar ho sakti hain" : "umeed ke mutabiq nahin raha"}.${p.length ? ` Achi baat: ${l.toLowerCase()}.` : ""}${bad.length ? ` Masla: ${bad.join(", ").toLowerCase()}.` : ""}${extra}`,
-        };
-  }
-  if (lang === "ur") {
-    const l = list(p, "اور");
-    return good
-      ? {
-          veryShort: p.length ? `${p[0]}، بہت اچھا لگا۔` : "بہت اچھا تجربہ رہا۔",
-          short: p.length ? `${name} کا وزٹ اچھا رہا۔ ${l} خاص طور پر پسند آیا۔` : `${name} کا وزٹ اچھا رہا، دوبارہ ضرور آئیں گے۔`,
-          medium: `ہمارا وزٹ کافی اچھا رہا۔${p.length ? ` ${l} سب سے زیادہ پسند آیا۔` : ""}${extra} دوبارہ ضرور آئیں گے۔`,
-        }
-      : {
-          veryShort: rating === 3 ? "ٹھیک تھا، بہتر ہو سکتا ہے۔" : "تجربہ اچھا نہیں رہا۔",
-          short: `${name} کا وزٹ ${rating === 3 ? "ٹھیک تھا" : "امید کے مطابق نہیں تھا"}۔${bad.length ? ` مسئلہ: ${bad[0]}۔` : p.length ? ` ${l} اچھا تھا۔` : ""}`,
-          medium: `وزٹ ${rating === 3 ? "ٹھیک رہا، لیکن کچھ چیزیں بہتر ہو سکتی ہیں" : "امید کے مطابق نہیں رہا"}۔${p.length ? ` اچھی بات: ${l}۔` : ""}${bad.length ? ` مسئلہ: ${bad.join("، ")}۔` : ""}${extra}`,
-        };
-  }
-  const l = list(p.map((x, i) => (i ? x.toLowerCase() : x)), "and");
+  const sentence = (x: string) => (x ? ` ${cap(x.replace(/[.!?۔]*$/, ""))}${stop}` : "");
+  const liked = sentence(join(picks));
+  const bad = sentence(join(issues));
+  const extra = sentence(note.trim());
+  const first = picks[0] ? cap(picks[0]) + stop : "";
+
+  const words = {
+    en: good
+      ? { very: first ? `${first} Really liked it.` : "Really good visit.", open: `Had a good visit to ${name}.`, long: "Our visit went really well.", end: " Will come again." }
+      : { very: rating === 3 ? "It was okay." : "Not a good visit.", open: `My visit to ${name} was ${rating === 3 ? "okay" : "not good"}.`, long: rating === 3 ? "The visit was okay, but some things can be better." : "The visit did not go well.", end: "" },
+    roman: good
+      ? { very: first ? `${first} Bohat acha laga.` : "Bohat acha visit raha.", open: `${name} ka visit acha raha.`, long: "Hamara visit kaafi acha raha.", end: " Dobara zaroor aana hai." }
+      : { very: rating === 3 ? "Theek tha." : "Visit acha nahin raha.", open: `${name} ka visit ${rating === 3 ? "theek tha" : "acha nahin raha"}.`, long: rating === 3 ? "Visit theek raha, lekin kuch cheezein behtar ho sakti hain." : "Visit umeed ke mutabiq nahin raha.", end: "" },
+    ur: good
+      ? { very: first ? `${first} بہت اچھا لگا۔` : "بہت اچھا تجربہ رہا۔", open: `${name} آ کر اچھا لگا۔`, long: "یہاں آنا بہت اچھا رہا۔", end: " دوبارہ ضرور آنا ہے۔" }
+      : { very: rating === 3 ? "ٹھیک تھا۔" : "تجربہ اچھا نہیں رہا۔", open: `${name} کا تجربہ ${rating === 3 ? "ٹھیک تھا" : "اچھا نہیں رہا"}۔`, long: rating === 3 ? "تجربہ ٹھیک رہا، لیکن کچھ چیزیں بہتر ہو سکتی ہیں۔" : "تجربہ امید کے مطابق نہیں رہا۔", end: "" },
+  }[lang];
+
   return good
-    ? {
-        veryShort: p.length ? `${p[0]}. Really enjoyed it.` : "Really good experience.",
-        short: p.length ? `Had a good visit to ${name}. ${l} stood out for me.` : `Had a good visit to ${name}. Will come back.`,
-        medium: `Our visit went really well.${p.length ? ` ${l} stood out the most.` : ""}${extra} Would happily come back.`,
-      }
-    : {
-        veryShort: rating === 3 ? "It was okay, could be better." : "Not a great experience.",
-        short: `My visit to ${name} was ${rating === 3 ? "okay overall" : "not what I expected"}.${bad.length ? ` Main issue: ${bad[0].toLowerCase()}.` : p.length ? ` ${l} was good.` : ""}`,
-        medium: `The visit ${rating === 3 ? "was fine, though a few things could be better" : "didn't go as I hoped"}.${p.length ? ` On the plus side: ${l.toLowerCase()}.` : ""}${bad.length ? ` What let it down: ${bad.join(", ").toLowerCase()}.` : ""}${extra}`,
-      };
+    ? { veryShort: words.very, short: `${words.open}${liked}`, medium: `${words.long}${liked}${extra}${words.end}` }
+    : { veryShort: words.very, short: `${words.open}${bad || liked}`, medium: `${words.long}${liked}${bad}${extra}` };
 }

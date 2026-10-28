@@ -18,14 +18,14 @@ type Screen = "rate" | "picks" | "drafts" | "note" | "thanks";
 
 const LANG_KEY = "reputra:lang";
 
-// The language a customer chose last time, read without a flash: English on the server,
-// their saved choice on the first client render.
+// The language a customer chose last time, read without a flash: Roman Urdu (how most customers
+// write on WhatsApp) on the server and for a first visit, their saved choice after that.
 function savedLang(): Lang {
   try {
     const v = localStorage.getItem(LANG_KEY) as Lang | null;
-    return v && LANGS.includes(v) ? v : "en";
+    return v && LANGS.includes(v) ? v : "roman";
   } catch {
-    return "en";
+    return "roman";
   }
 }
 const noSubscribe = () => () => {};
@@ -71,7 +71,7 @@ const ADVANCE_MS = 650;
 // forward) and each is a history entry, so the phone's back gesture goes back one step.
 // The stars are recorded so the owner learns how visits felt.
 export function ReviewFlow({ business, source, preview = false }: Props) {
-  const stored = useSyncExternalStore(noSubscribe, savedLang, () => "en" as Lang);
+  const stored = useSyncExternalStore(noSubscribe, savedLang, () => "roman" as Lang);
   const [picked, setPicked] = useState<Lang | null>(null);
   const lang = picked ?? stored;
   const storedTheme = useSyncExternalStore(noSubscribe, savedTheme, () => "light" as const);
