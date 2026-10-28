@@ -41,7 +41,7 @@ const shellData = cache(async (): Promise<ShellData> => {
       </form>
     ),
     account: (
-      <div className="flex items-center gap-2 border-t border-edge px-1 pt-3">
+      <div className="flex items-center gap-2 border-t border-shell-edge px-1 pt-3">
         <span aria-hidden="true" className="grid size-8 shrink-0 place-items-center rounded-full bg-active text-xs font-semibold">
           {admin.name.trim().charAt(0).toUpperCase()}
         </span>
@@ -50,7 +50,7 @@ const shellData = cache(async (): Promise<ShellData> => {
           <span className="block truncate text-xs text-muted">{admin.email}</span>
         </span>
         <form action="/logout" method="post">
-          <button type="submit" className="grid size-9 place-items-center rounded-full text-muted hover:bg-hover hover:text-ink" aria-label="Log out" title="Log out">
+          <button type="submit" className="grid size-9 place-items-center rounded-full text-muted hover:bg-shell-hover hover:text-ink" aria-label="Log out" title="Log out">
             <LogOut aria-hidden="true" className="size-4" strokeWidth={1.75} />
           </button>
         </form>

@@ -1,8 +1,7 @@
 "use server";
 
 import { z } from "zod";
-import { db } from "@/lib/db";
-import { Business } from "@/models/Business";
+import { resolveEntry } from "@/lib/public";
 import { Event, toSource } from "@/models/Event";
 import { Feedback } from "@/models/Feedback";
 import { keep, type FormState } from "@/lib/form-state";
@@ -23,12 +22,11 @@ export async function sendFeedback(_: FormState, form: FormData): Promise<FormSt
   const { slug, message, name, phone, website } = parsed.data;
   if (website) return { ok: "Thank you." };
 
-  await db();
-  const business = await Business.findOne({ slug, status: "active" }).select("_id").lean();
-  if (!business) return { error: "This review page no longer exists." };
+  const entry = await resolveEntry(slug); // the item's code, or an old slug
+  if (!entry) return { error: "This review page no longer exists." };
 
   const source = toSource(parsed.data.source);
-  await Feedback.create({ business: business._id, message, name, phone, source });
-  await Event.create({ business: business._id, type: "feedback", source });
+  await Feedback.create({ business: entry.business._id, message, name, phone, source });
+  await Event.create({ business: entry.business._id, tag: entry.tag, type: "feedback", source });
   return { ok: "Thank you. Your message went straight to the owner." };
 }

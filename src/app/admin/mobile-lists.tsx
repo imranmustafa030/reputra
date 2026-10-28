@@ -3,7 +3,7 @@ import { MessageCircle } from "lucide-react";
 import { movePack } from "@/app/actions/admin";
 import { SubmitButton } from "@/components/form";
 import type { PackRow, PaymentRow } from "@/lib/admin";
-import { formatDay, formatPhone, formatWhen, METHOD_NAMES, PACK_LABEL, PACK_STEPS, PAYMENT_STATUS, PLAN_NAMES } from "@/lib/labels";
+import { formatDay, formatPhone, formatWhen, METHOD_NAMES, PACK_LABEL, PACK_STEPS, PAYMENT_STATUS } from "@/lib/labels";
 import { formatPKR } from "@/lib/plans";
 import { PaymentActions } from "./payment-actions";
 
@@ -29,7 +29,7 @@ export function PaymentStack({ rows }: { rows: PaymentRow[] }) {
               {p.transactionId && <span className="font-mono"> · TID {p.transactionId}</span>}
             </p>
             <p className="text-xs text-muted">
-              {PLAN_NAMES[p.plan]} · {p.interval === "year" ? "1 year" : "1 month"} · {formatWhen(p.createdAt)}
+              {p.what} · {formatWhen(p.createdAt)}
             </p>
             <div className="mt-3">
               {p.status === "submitted" ? (

@@ -28,7 +28,7 @@ Reputra is one website with four different "doors". Each person only sees their 
 | Who | What they use it for | Web address | Status |
 |---|---|---|---|
 | **Visitor** (a business owner who hasn't signed up yet) | Reads about Reputra, sees prices, signs up and pays online | `reputra.pk` (the home page) → `/signup` → `/checkout` | ✅ built |
-| **Customer** (the person who just visited the café or clinic) | Leaves a Google review, or sends the owner a private note | `reputra.pk/r/business-name` | ✅ built |
+| **Customer** (the person who just visited the café or clinic) | Leaves a Google review, or sends the owner a private note | `reputra.pk/t/K7X9Q2` (each item and link has its own code; old `/r/business-name` links redirect) | ✅ built |
 | **Business owner** (only the owner logs in; staff don't) | Sees who went on to Google, asks customers on WhatsApp, reads private notes, gets QR and NFC links, pays and renews | `reputra.pk/dashboard` | ✅ built |
 | **Reputra team (admin: you)** | Checks payments, delivers stands and cards, sees every business, adds businesses in person, sets prices and payment accounts | `reputra.pk/admin` | ✅ built |
 
@@ -99,10 +99,12 @@ To come:
 | **Checkout** | Plan, delivery address (first time), payment by transfer + TID; renewals and plan changes | ✅ |
 | **Overview** | New accounts: a 4-step setup track (Plan paid → Google link → Stand & card → First customer). Always: customers sent to Google in 30 days, a bar per day, a row per way in (stand, card, WhatsApp), latest private notes, their review link, their plan | ✅ |
 | **Ask on WhatsApp** | One customer (name + number), or **paste a list** from Excel or a chat and press "Ask" for each. WhatsApp opens with the message ready, from their own number. Numbers are never saved | ✅ |
-| **Stand & card** | Delivery progress, QR code to download and print, the NFC, WhatsApp and plain links | ✅ |
+| **Your items** | Every printed item with its own code, status and scans in the last 30 days; "Lost it?" switches one item off (its code then shows "This stand no longer works"); delivery progress; the WhatsApp and plain links. No print files or NFC instructions: new items come from the shop | ✅ |
+| **Shop** | Counter stand PKR 2,999, tap card 1,299, NFC tap sticker 599, any quantity. A turning 3D preview of each item with the business's name and a "Powered by Reputra" mark. "Your own design: coming soon" with a WhatsApp contact. Pay by transfer + TID; printing starts once the team confirms the transfer | ✅ |
 | **Private notes** | Every note with "New" marks and a "Reply on WhatsApp" button | ✅ |
 | **Plan & billing** | Plan, paid-until date, switch plan, renew, stand & card status, every payment with its status (Checking / Paid / Not received) | ✅ |
 | **Settings** | Business name, type, city, Google review link (with how-to), WhatsApp message with live preview, change password | ✅ |
+| **Connect Google** (Settings → Google review link) | Instead of pasting a link: find the business on Google by name, or sign in with Google and pick it. Code is built and tested up to Google's side; shows as "Soon" until switched on (see Later) | 🟡 |
 | Alert when a private note arrives (WhatsApp or email) | Website promises this | ⬜ |
 | "Before vs after": starting review count → growth | So the owner sees "18 → 64 reviews" | ⬜ |
 | **Staff leaderboard** (Pro): each staff member gets their own link | Website lists it in the Pro plan | ⬜ |
@@ -117,8 +119,8 @@ Only Reputra team accounts can open it. The first admin is created by the seed (
 | Page | What you do there | Status |
 |---|---|---|
 | **Overview** | What needs doing today: payments to check, setup packs to deliver, renewals coming up, people who signed up but didn't pay (each with a WhatsApp button). Totals: paying businesses, monthly revenue, collected this month, customers sent to Google | ✅ |
-| **Payments** | Match transfers by TID and amount: "Received" or "Reject…" with a reason the owner sees. Tabs: To check, Paid, Not received, All | ✅ |
-| **Setup packs** | Each free stand and card from Ordered to Installed, one button per step, with address and the contact's WhatsApp | ✅ |
+| **Payments** | Match transfers by TID and amount: "Received" or "Reject…" with a reason the owner sees. Plans and shop orders ("Shop · 2 stands, 6 stickers") share the queue; confirming a shop order creates its delivery. Tabs: To check, Paid, Not received, All | ✅ |
+| **Setup packs** | Each delivery (the free stand and card, or a shop order) from Ordered to Installed, one button per step, with address and the contact's WhatsApp. **Print files** per delivery: each item's code, the stand's QR file and the address to write into each NFC chip (only the team sees these) | ✅ |
 | **Businesses** | Every business, searchable by name, owner, email or phone; tabs: Paying, Due or lapsed, Not paid yet, Paused | ✅ |
 | **One business** | Their numbers, payments, stand & card, owner contact, **record a payment** (cash or a transfer they told you about), **reset password**, **pause / turn back on**, a private team note | ✅ |
 | **Add business** | Create an owner's login during an in-person visit; the password is shown once to hand over | ✅ |
@@ -208,6 +210,9 @@ Only Reputra team accounts can open it. The first admin is created by the seed (
 - [ ] Online card / wallet gateway (once the merchant account is approved)
 
 ### Later (after the first 10 paying businesses)
+- **Switch on Connect Google.** The code is done; it turns on by itself when its keys are in `.env.local` / Vercel (see `.env.example`). Google Cloud project: "Reputra" (reputra-513008) on the personal Gmail.
+  - *Find on Google*: needs billing on that project. Google asks a one-time, refundable US$30 prepayment for our card. Then enable Places API (New), create a key limited to it, set `GOOGLE_MAPS_API_KEY`, and add a daily quota cap in Google Cloud. Reputra already caps itself at 300 lookups a day, inside Google's free allowance.
+  - *Sign in with Google*: the OAuth client exists (keys kept, commented out, in `.env.local`). Still needed: Google's approval of Business Profile API access (form at support.google.com/business/workflow/16726127; the applying account must manage a verified profile 60+ days old), then add the production redirect URL `https://<domain>/api/google/callback` to the client, and publish the consent screen.
 - Automatic reminders after 2–3 days (official WhatsApp Business API, costs money)
 - Show live Google reviews and reply to them from the dashboard
 - Selling abroad in USD
@@ -259,8 +264,9 @@ After any change: save, push to GitHub, and Vercel puts it live in about a minut
 | **Seed** | A one-time setup command that prepares an empty database (prices, payment accounts, the first admin). |
 | **TID** | Transaction ID: the number on a bank or wallet receipt. We use it to match a transfer to a payment. |
 | **Gateway** | A company (Safepay, PayFast, JazzCash) that lets people pay by card or wallet on a web page. Free to open, a small cut per payment. |
-| **Setup pack** | The free acrylic counter stand and NFC tap card sent with the first payment. |
-| **Slug** | The business's short name in its review link, e.g. `smile-dental-clinic` in `reputra.pk/r/smile-dental-clinic`. It never changes, so printed stands keep working. |
+| **Setup pack** | A delivery of printed items: the free stand and card sent with the first payment, or an order from the shop. |
+| **Code** | Six characters like `K7X9Q2` in `reputra.pk/t/K7X9Q2`. Every printed item has its own, plus one for WhatsApp and one plain link per business. It doesn't show the business name, counts scans per item, and can be switched off on its own. A stand's NFC chip adds `?s=nfc` so scans and taps count apart. |
+| **Slug** | The business's short internal name, e.g. `smile-dental-clinic`. No longer printed anywhere; old `reputra.pk/r/smile-dental-clinic` links redirect to the business's code. |
 | **QR** | The square code customers scan with their camera. |
 | **NFC** | The "tap" chip in the card and stand. The phone opens the link when held near it. |
 | **Admin** | The Reputra team's side of the system. |

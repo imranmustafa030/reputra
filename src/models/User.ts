@@ -15,6 +15,8 @@ const userSchema = new Schema(
     status: { type: String, enum: ["active", "disabled"], default: "active" },
     // Bumped on password reset or disable: sessions carry the version they were issued with.
     sessionVersion: { type: Number, default: 0 },
+    // When the owner (or the team, on a reset) last set a new password; Settings shows it.
+    passwordChangedAt: { type: Date, default: null },
     lastLoginAt: { type: Date, default: null },
   },
   { timestamps: true },

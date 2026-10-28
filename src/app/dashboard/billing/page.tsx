@@ -9,6 +9,8 @@ import { getPlans, priceOf } from "@/lib/billing";
 import { whatsappLink } from "@/lib/contact";
 import { db } from "@/lib/db";
 import { formatDay, METHOD_NAMES, PACK_STEPS, PAYMENT_STATUS, PLAN_NAMES } from "@/lib/labels";
+import { describeItems, type CartLine } from "@/lib/shop";
+import type { PlanCode } from "@/models/Plan";
 import { formatPKR, INTERVAL_LABEL } from "@/lib/plans";
 import { Payment } from "@/models/Payment";
 import { SetupPack } from "@/models/SetupPack";
@@ -147,8 +149,17 @@ export default async function BillingPage() {
                     <td className="whitespace-nowrap">{formatDay(p.createdAt)}</td>
                     <td className="font-mono text-[0.8125rem]">{p.reference}</td>
                     <td>
-                      {PLAN_NAMES[p.plan]} · {p.interval === "year" ? "1 year" : "1 month"}
-                      {p.firstPayment && <span className="block text-xs text-muted">with free stand and card</span>}
+                      {p.kind === "shop" ? (
+                        <>
+                          Shop order
+                          <span className="block text-xs text-muted">{describeItems(p.items as CartLine[])}</span>
+                        </>
+                      ) : (
+                        <>
+                          {PLAN_NAMES[p.plan as PlanCode]} · {p.interval === "year" ? "1 year" : "1 month"}
+                          {p.firstPayment && <span className="block text-xs text-muted">with free stand and card</span>}
+                        </>
+                      )}
                     </td>
                     <td>
                       {METHOD_NAMES[p.method]}

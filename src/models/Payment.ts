@@ -1,5 +1,10 @@
 import { Schema, model, models, type InferSchemaType, type Model } from "mongoose";
+import { PRODUCT_KINDS } from "@/lib/shop";
 import { INTERVALS, PLAN_CODES } from "./Plan";
+
+function isPlan(this: { kind?: string }) {
+  return this.kind !== "shop";
+}
 
 // How the money moved. Transfers are checked by hand; "card" goes through the online gateway.
 export const PAYMENT_METHODS = ["raast", "jazzcash", "easypaisa", "bank", "card", "cash"] as const;
@@ -18,8 +23,14 @@ const paymentSchema = new Schema(
     business: { type: Schema.Types.ObjectId, ref: "Business", required: true },
     // Short code the owner writes in the transfer note, e.g. RP-7K3Q9M, so admins can match it in the bank app.
     reference: { type: String, required: true, unique: true },
-    plan: { type: String, enum: PLAN_CODES, required: true },
-    interval: { type: String, enum: INTERVALS, required: true },
+    // plan: a month or year of the plan; shop: printed items, delivered once the transfer is confirmed.
+    kind: { type: String, enum: ["plan", "shop"], default: "plan" },
+    plan: { type: String, enum: PLAN_CODES, required: isPlan },
+    interval: { type: String, enum: INTERVALS, required: isPlan },
+    items: {
+      type: [{ _id: false, kind: { type: String, enum: PRODUCT_KINDS, required: true }, qty: { type: Number, required: true, min: 1 } }],
+      default: [],
+    },
     amount: { type: Number, required: true, min: 0 }, // whole rupees
     currency: { type: String, default: "PKR" },
     method: { type: String, enum: PAYMENT_METHODS, required: true },
@@ -32,7 +43,7 @@ const paymentSchema = new Schema(
     periodStart: { type: Date, default: null },
     periodEnd: { type: Date, default: null },
     firstPayment: { type: Boolean, default: false }, // the one that comes with the free stand and card
-    // Where the free stand and card go. Kept here until the payment is applied, which creates the SetupPack.
+    // Where the free stand and card (or the shop order) go. Kept here until the payment is applied, which creates the SetupPack.
     delivery: {
       type: {
         _id: false,

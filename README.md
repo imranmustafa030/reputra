@@ -11,8 +11,9 @@ For what the product does and where it's heading, in plain words, read [PROJECT-
 | `/checkout` | Choose plan, give the delivery address (first payment), pay. Also used for renewals | `src/app/checkout` |
 | `/dashboard/…` | Owner dashboard: overview, Ask on WhatsApp, stand & card, private notes, plan & billing, settings | `src/app/dashboard` |
 | `/admin/…` | Reputra team: overview, payments to check, setup packs, businesses, settings (prices, payment accounts) | `src/app/admin` |
-| `/r/<slug>` | The page customers reach from the counter stand (`?s=qr`), tap card (`?s=nfc`) or WhatsApp (`?s=wa`) | `src/app/r/[slug]` |
-| `/r/<slug>/go` | Counts the tap, then sends the customer to the Google review form | `src/app/r/[slug]/go/route.ts` |
+| `/t/<code>` | The page customers reach from a printed item or link; each has its own code (a stand's NFC chip adds `?s=nfc`) | `src/app/t/[code]` |
+| `/t/<code>/go` | Counts the tap, then sends the customer to the Google review form | `src/app/t/[code]/go/route.ts` |
+| `/r/<slug>` | Old address by business name; redirects to the business's code | `src/app/r/[slug]` |
 | `/api/health` | Is the app up and is MongoDB reachable? | `src/app/api/health/route.ts` |
 | `/api/events` | The review page reports a visit | `src/app/api/events/route.ts` |
 

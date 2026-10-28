@@ -42,8 +42,10 @@ const SOURCES = [
 
 export function FilmStage() {
   return (
+    // The film's script starts, trims or stops the video before React hydrates, on purpose.
     <div
       className="contents"
+      suppressHydrationWarning
       dangerouslySetInnerHTML={{
         __html: `<div id="rv-film" class="rv-film" aria-hidden="true"><video muted playsinline disablepictureinpicture preload="auto">${SOURCES}</video></div>`,
       }}
@@ -81,5 +83,7 @@ v.muted=true;var p=v.play();if(p&&p.catch)p.catch(fail);
       `</div><script>${controller}</script>`
     : `<i hidden></i><script>${controller}</script>`;
 
-  return <div className="contents" dangerouslySetInnerHTML={{ __html: html }} />;
+  // The inline script moves the title card into the film before React hydrates, so this
+  // container's HTML differs from the server's on purpose.
+  return <div className="contents" suppressHydrationWarning dangerouslySetInnerHTML={{ __html: html }} />;
 }

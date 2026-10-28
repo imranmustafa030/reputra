@@ -110,17 +110,23 @@ const passwordSchema = z
   .refine((v) => v.password === v.confirm, { message: "The two new passwords don’t match.", path: ["confirm"] });
 
 // Changing the password signs out every other device and keeps this one logged in.
+// A problem names its field, so Settings can write it under that box and put the cursor there.
 export async function changePassword(_: FormState, form: FormData): Promise<FormState> {
   const me = await getCurrentUser();
   if (!me) redirect("/logout");
   const parsed = passwordSchema.safeParse(Object.fromEntries(form));
-  if (!parsed.success) return { error: parsed.error.issues[0].message };
+  if (!parsed.success) {
+    const issue = parsed.error.issues[0];
+    return { error: issue.message, field: String(issue.path[0] ?? "") };
+  }
   if (!(await allow(`password:${me.id}`, 8, 900))) return { error: "Too many attempts. Wait 15 minutes and try again." };
 
   await db();
   const user = await User.findById(me.id).select("+passwordHash");
-  if (!user || !(await bcrypt.compare(parsed.data.current, user.passwordHash))) return { error: "Your current password isn’t right." };
+  if (!user || !(await bcrypt.compare(parsed.data.current, user.passwordHash))) return { error: "Your current password isn’t right.", field: "current" };
+  if (parsed.data.password === parsed.data.current) return { error: "Pick a new password, not your current one.", field: "password" };
   user.passwordHash = await bcrypt.hash(parsed.data.password, 10);
+  user.passwordChangedAt = new Date();
   user.sessionVersion += 1;
   await user.save();
   await startSession(String(user._id), user.sessionVersion);

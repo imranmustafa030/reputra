@@ -9,6 +9,8 @@ import { Subscription, type SubscriptionDoc } from "@/models/Subscription";
 import { Payment, type PaymentMethod, type PaymentStatus } from "@/models/Payment";
 import { PaymentAccount, type TransferMethod } from "@/models/PaymentAccount";
 import { SetupPack } from "@/models/SetupPack";
+import { cartTotal, type CartLine } from "./shop";
+import { ensurePackTags } from "./tags";
 
 // Billing rules in one place. Plans are prepaid: each payment adds one month or one
 // year after the current paid-until date. Transfers switch the plan on as soon as the
@@ -165,34 +167,95 @@ export async function createPayment(input: NewPayment) {
   }
 }
 
-// Adds the payment's month or year to the subscription, once. Safe to call twice.
+type NewShopOrder = {
+  businessId: string;
+  items: CartLine[];
+  method: PaymentMethod;
+  transactionId: string;
+  payerName: string;
+  delivery: { contactName: string; contactPhone: string; address: string; city: string };
+};
+
+// A shop order waits for the team to find the transfer; only then is anything printed.
+export async function createShopOrder(input: NewShopOrder) {
+  await db();
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await Payment.create({
+        business: input.businessId,
+        reference: newReference(),
+        kind: "shop",
+        items: input.items,
+        amount: cartTotal(input.items),
+        method: input.method,
+        provider: "manual",
+        status: "submitted",
+        transactionId: input.transactionId.trim().toUpperCase(),
+        payerName: input.payerName,
+        delivery: input.delivery,
+      });
+    } catch (err) {
+      const dup = err as { code?: number; keyPattern?: Record<string, number> };
+      if (dup.code === 11000 && dup.keyPattern?.transactionId) throw new DuplicateTransactionError();
+      if (dup.code === 11000 && dup.keyPattern?.reference && attempt < 4) continue;
+      throw err;
+    }
+  }
+}
+
+// A confirmed shop order becomes a delivery for the team, with one code per item.
+async function applyShopOrder(payment: InstanceType<typeof Payment>) {
+  if (!payment.delivery || (await SetupPack.exists({ payment: payment._id }))) return;
+  const qty = (kind: string) => payment.items.find((i) => i.kind === kind)?.qty ?? 0;
+  const pack = await SetupPack.create({
+    business: payment.business,
+    payment: payment._id,
+    stands: qty("stand"),
+    cards: qty("card"),
+    stickers: qty("sticker"),
+    fromShop: true,
+    contactName: payment.delivery.contactName,
+    contactPhone: payment.delivery.contactPhone,
+    address: payment.delivery.address,
+    city: payment.delivery.city,
+    history: [{ status: "new", at: new Date() }],
+  });
+  await ensurePackTags(pack._id);
+}
+
+// Adds the payment's month or year to the subscription (or, for a shop order, starts its
+// delivery), once. Safe to call twice.
 export async function applyPayment(paymentId: string | Types.ObjectId) {
   await db();
   const payment = await Payment.findOneAndUpdate(
-    { _id: paymentId, applied: false, status: { $in: ["submitted", "confirmed"] } },
+    // A shop order applies only once the team confirms the transfer; a plan applies on submit.
+    { _id: paymentId, applied: false, $or: [{ kind: "shop", status: "confirmed" }, { kind: { $ne: "shop" }, status: { $in: ["submitted", "confirmed"] } }] },
     { $set: { applied: true } },
     { returnDocument: "after" },
   );
   if (!payment) return;
+  if (payment.kind === "shop") return applyShopOrder(payment);
 
   const now = new Date();
   const sub = await Subscription.findOne({ business: payment.business });
   const start = sub && sub.currentPeriodEnd > now ? sub.currentPeriodEnd : now;
   const end = addInterval(start, payment.interval as Interval);
+  const plan = payment.plan as PlanCode;
+  const interval = payment.interval as Interval;
 
   if (sub) {
     if (start === now) sub.currentPeriodStart = now;
     sub.currentPeriodEnd = end;
-    sub.plan = payment.plan;
-    sub.interval = payment.interval;
+    sub.plan = plan;
+    sub.interval = interval;
     sub.status = "active";
     sub.canceledAt = null;
     await sub.save();
   } else {
     await Subscription.create({
       business: payment.business,
-      plan: payment.plan,
-      interval: payment.interval,
+      plan,
+      interval,
       currentPeriodStart: start,
       currentPeriodEnd: end,
     });
@@ -200,7 +263,7 @@ export async function applyPayment(paymentId: string | Types.ObjectId) {
   await Payment.updateOne({ _id: payment._id }, { $set: { periodStart: start, periodEnd: end } });
 
   if (payment.firstPayment && payment.delivery && !(await SetupPack.exists({ payment: payment._id }))) {
-    await SetupPack.create({
+    const pack = await SetupPack.create({
       business: payment.business,
       payment: payment._id,
       contactName: payment.delivery.contactName,
@@ -209,6 +272,7 @@ export async function applyPayment(paymentId: string | Types.ObjectId) {
       city: payment.delivery.city,
       history: [{ status: "new", at: now }],
     });
+    await ensurePackTags(pack._id);
   }
 }
 

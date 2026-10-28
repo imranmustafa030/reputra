@@ -1,4 +1,6 @@
 import "server-only";
+import { PLAN_NAMES } from "./labels";
+import { describeItems, type CartLine } from "./shop";
 import { Types } from "mongoose";
 import { db } from "./db";
 import { accessFrom, type Access } from "./billing";
@@ -119,6 +121,9 @@ export async function listPayments(filter: { status?: string[]; businessId?: str
     demo: Boolean(p.business?.demo),
     plan: p.plan as PlanCode,
     interval: p.interval,
+    kind: (p.kind ?? "plan") as "plan" | "shop",
+    // What it paid for, in one line: "Basic · 1 month" or "Shop · 2 stands, 1 card".
+    what: p.kind === "shop" ? `Shop · ${describeItems(p.items as CartLine[])}` : `${PLAN_NAMES[p.plan as PlanCode]} · ${p.interval === "year" ? "1 year" : "1 month"}`,
     amount: p.amount,
     method: p.method,
     provider: p.provider,
@@ -151,6 +156,8 @@ export async function listPacks(filter: { status?: PackStatus[]; businessId?: st
     slug: p.business?.slug ?? "",
     stands: p.stands,
     cards: p.cards,
+    stickers: p.stickers ?? 0,
+    fromShop: Boolean(p.fromShop),
     contactName: p.contactName,
     contactPhone: p.contactPhone,
     address: p.address,

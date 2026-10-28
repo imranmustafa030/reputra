@@ -26,9 +26,9 @@ export const PAYMENT_STATUS: Record<PaymentStatus, { label: string; tone: "" | "
 
 export const PACK_STEPS: { status: Exclude<PackStatus, "canceled">; label: string; owner: string }[] = [
   { status: "new", label: "Ordered", owner: "We’ve got your order" },
-  { status: "printing", label: "Printing", owner: "Your stand and card are being printed" },
+  { status: "printing", label: "Printing", owner: "Your items are being printed" },
   { status: "on_the_way", label: "On the way", owner: "On the way to you" },
-  { status: "installed", label: "Installed", owner: "Installed at your counter" },
+  { status: "installed", label: "Installed", owner: "Delivered and set up" },
 ];
 
 export const PACK_LABEL: Record<PackStatus, string> = {

@@ -6,7 +6,8 @@ import { COPY, LANG_NAMES, LANGS, type Lang } from "./copy";
 import { PrivateFeedback } from "./private-feedback";
 
 type Props = {
-  business: { name: string; slug: string; hasGoogleLink: boolean; intro: boolean };
+  // slug: what the page reports back with (the item's code, or the old slug); base: the page's own address.
+  business: { name: string; slug: string; hasGoogleLink: boolean; intro: boolean; base?: string };
   source: string;
   preview?: boolean;
 };
@@ -132,7 +133,7 @@ export function ReviewFlow({ business, source, preview = false }: Props) {
 
   const shown = hover || rating;
   const rtl = lang === "ur";
-  const googleHref = `/r/${business.slug}/go?s=${source}`;
+  const googleHref = `${business.base ?? `/r/${business.slug}`}/go?s=${source}`;
 
   return (
     <div

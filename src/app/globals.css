@@ -22,7 +22,11 @@
   --color-danger: oklch(53% 0.2 27);
 
   /* Working screens */
-  --color-frame: oklch(96.6% 0.0035 85); /* warm stone, from the website's paper */
+  --color-frame: oklch(96.6% 0.0035 85); /* warm stone: wells and quiet blocks inside the sheet */
+  /* The L-frame around the sheet: warm ink (see .app-shell). Hover and rules on it are re-set in .shell-zone. */
+  --color-shell: oklch(17.5% 0.008 70);
+  --color-shell-hover: oklch(27% 0.014 72);
+  --color-shell-edge: oklch(31% 0.012 72);
   --color-sheet: #ffffff;
   --color-edge: oklch(91.8% 0.004 85); /* card and sheet edges */
   --color-rule: oklch(95.2% 0.003 85); /* row rules, one step lighter */
@@ -406,6 +410,58 @@
     font-size: 0.75rem;
     font-weight: 500;
     color: var(--color-ink);
+  }
+  /* The working-screen frame: ink and gold. The website's warm near-black, a fine grain, an
+     amber glow behind the logo and a softer one bottom right; the white sheet glows in the middle
+     on a deep shadow. Only .shell-zone parts (sidebar, top bar, phone menu) flip to light type:
+     colour classes are utilities and outrank component rules, so the tokens themselves are
+     re-pointed here rather than the colours. */
+  .app-shell {
+    --color-shell: oklch(17.5% 0.008 70);
+    background:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .32 0 0 0 0 .24 0 0 0 0 .12 0 0 0 .09 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),
+      radial-gradient(46rem 30rem at -8% -12%, oklch(58% 0.13 72 / 0.5), transparent 64%),
+      radial-gradient(44rem 34rem at 108% 112%, oklch(42% 0.08 58 / 0.32), transparent 60%),
+      var(--color-shell);
+  }
+  @media (min-width: 1024px) {
+    .app-shell {
+      background-attachment: fixed;
+    }
+  }
+  .shell-zone {
+    --color-ink: oklch(97.5% 0.006 85);
+    --color-ink-3: oklch(86% 0.012 82);
+    --color-muted: oklch(72% 0.014 80);
+    --color-faint: oklch(68% 0.012 80);
+    --color-active: oklch(31% 0.014 72);
+    --color-shell-hover: oklch(27% 0.014 72);
+    --color-shell-edge: oklch(31% 0.012 72);
+    color: var(--color-ink);
+  }
+  /* the selected row is a piece of the white sheet, and fields are white: their type stays ink */
+  .shell-zone [aria-current="page"],
+  .shell-zone input {
+    --color-ink: oklch(14.5% 0.004 265);
+    --color-muted: oklch(47% 0.006 265);
+    --color-faint: oklch(54% 0.006 265);
+  }
+  .shell-zone input {
+    color: var(--color-ink);
+  }
+  /* the monogram tile and the attention count turn amber (an ink tile would vanish on ink) */
+  .shell-zone .monogram,
+  .shell-zone .count-alert {
+    --color-ink: var(--color-amber);
+    --color-paper: oklch(14.5% 0.004 265);
+  }
+  .app-sheet {
+    box-shadow: 0 24px 70px -28px oklch(0% 0 0 / 0.6);
+  }
+  @media (min-width: 1024px) {
+    .app-sheet {
+      border-color: transparent;
+    }
   }
   .nav-selected {
     background: var(--color-sheet);
@@ -1849,4 +1905,10 @@ html[data-rv-intro="title"] .rv-film-line + .rv-film-line > span {
 html[data-rv-intro="lift"] .rv-film {
   translate: 0 -100%;
   transition: translate 520ms cubic-bezier(0.7, 0, 0.2, 1);
+}
+
+/* the shop's 3D stage: a soft pool of light on warm stone, so a clear acrylic stand reads */
+.shop-stage {
+  background:
+    radial-gradient(120% 90% at 50% 38%, oklch(99.6% 0.002 85) 0%, oklch(97.4% 0.004 85) 55%, oklch(94.6% 0.006 85) 100%);
 }

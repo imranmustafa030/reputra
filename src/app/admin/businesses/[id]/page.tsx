@@ -90,7 +90,7 @@ export default async function BusinessPage({ params }: PageProps<"/admin/busines
                   <thead>
                     <tr>
                       <th>Date</th>
-                      <th>Plan</th>
+                      <th>For</th>
                       <th>Paid by</th>
                       <th className="r">Amount</th>
                       <th className="r">Status</th>
@@ -106,7 +106,7 @@ export default async function BusinessPage({ params }: PageProps<"/admin/busines
                             <span className="block font-mono text-xs text-muted">{p.reference}</span>
                           </td>
                           <td>
-                            {PLAN_NAMES[p.plan]} · {p.interval === "year" ? "1 year" : "1 month"}
+                            {p.what}
                             {p.periodEnd && <span className="block text-xs text-muted">to {formatDay(p.periodEnd)}</span>}
                           </td>
                           <td>

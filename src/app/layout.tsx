@@ -20,6 +20,7 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: "#0b0c0e",
+  viewportFit: "cover", // lets the phone menu and top bar pad themselves clear of the notch
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

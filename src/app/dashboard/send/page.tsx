@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { PageHeader } from "@/components/page-header";
 import { requirePaidOwner } from "@/lib/auth";
-import { reviewLink } from "@/lib/links";
+import { businessLinks } from "@/lib/tags";
 import { WhatsAppSender } from "./sender";
 
 export const metadata: Metadata = { title: "Ask on WhatsApp" };
@@ -19,7 +19,7 @@ export default async function SendPage() {
           Edit message
         </Link>
       </PageHeader>
-      <WhatsAppSender template={business.whatsappMessage} business={business.name} link={await reviewLink(business.slug, "wa")} />
+      <WhatsAppSender template={business.whatsappMessage} business={business.name} link={(await businessLinks(business.id)).wa} />
     </>
   );
 }

@@ -5,7 +5,7 @@ import { MessageCircle } from "lucide-react";
 import { PageHeader, SectionTitle } from "@/components/page-header";
 import { getOverview, listPacks, listPayments } from "@/lib/admin";
 import { requireAdmin } from "@/lib/auth";
-import { formatDay, formatPhone, formatWhen, METHOD_NAMES, PACK_LABEL, PLAN_NAMES } from "@/lib/labels";
+import { formatDay, formatPhone, formatWhen, METHOD_NAMES, PACK_LABEL } from "@/lib/labels";
 import { formatPKR } from "@/lib/plans";
 import { CountUp } from "@/components/motion/count-up";
 import { PackStack, PaymentStack } from "./mobile-lists";
@@ -78,7 +78,7 @@ async function AdminOverviewContent() {
                             {p.businessName}
                           </Link>
                           <span className="block text-xs text-muted">
-                            {PLAN_NAMES[p.plan]} · {p.interval === "year" ? "1 year" : "1 month"} · {formatWhen(p.createdAt)}
+                            {p.what} · {formatWhen(p.createdAt)}
                           </span>
                         </td>
                         <td>

@@ -1,104 +1,148 @@
 import type { Metadata } from "next";
-import QRCode from "qrcode";
-import { Download, ExternalLink } from "lucide-react";
+import Link from "next/link";
+import { ArrowRight, Sparkles } from "lucide-react";
 import { CopyButton } from "@/components/copy-button";
 import { PageHeader, SectionTitle } from "@/components/page-header";
+import { ProductArt } from "@/components/product-art";
 import { packSteps, StepTrack } from "@/components/step-track";
 import { requirePaidOwner } from "@/lib/auth";
+import { whatsappLink } from "@/lib/contact";
 import { db } from "@/lib/db";
 import { formatDay, PACK_STEPS } from "@/lib/labels";
-import { reviewLink } from "@/lib/links";
+import { formatPKR } from "@/lib/plans";
+import { describeItems, PRODUCTS, productOf, type CartLine } from "@/lib/shop";
+import { businessLinks, listItems, type ItemRow } from "@/lib/tags";
+import { Payment } from "@/models/Payment";
 import { SetupPack } from "@/models/SetupPack";
+import { ItemFooter } from "./switch-button";
 
-export const metadata: Metadata = { title: "Stand & card" };
+export const metadata: Metadata = { title: "Your items" };
 
-// Each way in gets its own link, so the overview can tell the stand, the tap card and WhatsApp apart.
-export default async function LinksPage() {
+// The owner's printed items, each a card with its own picture, status and the one number that
+// matters (scans and taps in the last 30 days), best first. Then the two links they share
+// themselves. No print files here: new and replacement items come from the shop.
+export default async function ItemsPage() {
   const { business } = await requirePaidOwner();
   await db();
-  const [qr, nfc, wa, plain, pack] = await Promise.all([
-    reviewLink(business.slug, "qr"),
-    reviewLink(business.slug, "nfc"),
-    reviewLink(business.slug, "wa"),
-    reviewLink(business.slug, "direct"),
-    SetupPack.findOne({ business: business.id, status: { $ne: "canceled" } }).sort({ createdAt: -1 }).lean(),
+  const [items, links, pack, checking] = await Promise.all([
+    listItems(business.id),
+    businessLinks(business.id),
+    SetupPack.findOne({ business: business.id, status: { $nin: ["canceled", "installed"] } }).sort({ createdAt: -1 }).lean(),
+    Payment.find({ business: business.id, kind: "shop", status: "submitted" }).sort({ createdAt: -1 }).lean(),
   ]);
-  const qrSvg = await QRCode.toString(qr, { type: "svg", margin: 2, errorCorrectionLevel: "M", color: { dark: "#0b0c0e", light: "#ffffff" } });
-  const step = pack ? PACK_STEPS.find((s) => s.status === pack.status) : null;
+
+  const rank = (i: ItemRow) => (i.status === "off" ? 2 : i.packStatus !== "installed" ? 1 : 0);
+  const sorted = [...items].sort((a, b) => rank(a) - rank(b) || b.scans - a.scans);
+  const working = items.filter((i) => rank(i) === 0);
+  const arriving = items.filter((i) => rank(i) === 1).length;
+  const scans = working.reduce((n, i) => n + i.scans, 0);
+  const top = working.length > 1 && working[0] && sorted[0].scans > 0 && sorted[0].scans > (sorted[1]?.scans ?? 0) ? sorted[0].id : null;
+  const cheapest = Math.min(...PRODUCTS.map((p) => p.price));
+
+  const lede = items.length
+    ? [`${working.length} working`, arriving ? `${arriving} on the way` : "", `${scans} ${scans === 1 ? "scan or tap" : "scans and taps"} in the last 30 days`].filter(Boolean).join(" · ")
+    : "Your stand and card appear here once they’re on their way.";
 
   return (
     <>
-      <PageHeader
-        title="Stand & card"
-        lede={
-          pack
-            ? pack.status === "installed"
-              ? `Your stand and card were installed on ${formatDay(pack.updatedAt)}. Every scan and tap opens the same review page.`
-              : `${step?.owner ?? "Being prepared"}. Every scan and tap will open the same review page.`
-            : "Every scan and tap opens the same review page."
-        }
-      >
-        <a href={plain} target="_blank" rel="noopener" className="btn btn-secondary btn-sm">
-          Open review page
-          <ExternalLink aria-hidden="true" className="size-3.5" strokeWidth={1.75} />
-        </a>
+      <PageHeader title="Your items" lede={lede}>
+        <Link href="/dashboard/shop" className="btn btn-sm">
+          Shop
+        </Link>
       </PageHeader>
 
-      {pack && pack.status !== "installed" && <StepTrack steps={packSteps(pack.status, PACK_STEPS)} label="Your stand and card" className="mb-4" />}
+      {checking.map((o) => (
+        <p key={String(o._id)} className="notice mb-4">
+          Order <span className="font-mono">{o.reference}</span> · {describeItems(o.items as CartLine[])} · {formatPKR(o.amount)}. We’re matching your
+          transfer; printing starts as soon as it’s found.
+        </p>
+      ))}
+      {pack && <StepTrack steps={packSteps(pack.status, PACK_STEPS)} label="Your delivery" className="mb-6" />}
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
-        <section className="panel p-5 sm:p-6" aria-labelledby="qr-title">
-          <h2 id="qr-title" className="font-medium">
-            Counter stand · QR code
-          </h2>
-          <p className="mt-1 text-sm text-muted">Printed on your acrylic stand. Customers point their camera at it.</p>
-          <div
-            className="mx-auto mt-6 aspect-square w-full max-w-[220px] overflow-hidden rounded-xl border border-edge [&>svg]:size-full"
-            role="img"
-            aria-label={`QR code for ${qr}`}
-            dangerouslySetInnerHTML={{ __html: qrSvg }}
-          />
-          <div className="mt-6 flex justify-center">
-            <a className="btn btn-secondary btn-sm" download={`${business.slug}-review-qr.svg`} href={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(qrSvg)}`}>
-              <Download aria-hidden="true" className="size-4" strokeWidth={1.75} />
-              Download for print
-            </a>
-          </div>
-        </section>
+      <section aria-labelledby="items-title">
+        <h2 id="items-title" className="sr-only">
+          Printed items
+        </h2>
+        <ul className="stagger grid grid-cols-[minmax(0,1fr)] gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {sorted.map((item) => (
+            <ItemCard key={item.id} item={item} top={item.id === top} />
+          ))}
+          <li className="flex flex-col rounded-[14px] border border-dashed border-control p-5">
+            <p className="font-medium">More places to ask</p>
+            <p className="mt-1 text-sm text-muted">A sticker for every table and mirror, a card in each bill folder, another stand for a second counter.</p>
+            <Link href="/dashboard/shop" className="btn btn-secondary btn-sm mt-4 self-start">
+              Open the shop · from {formatPKR(cheapest)}
+              <ArrowRight aria-hidden="true" className="size-3.5" strokeWidth={1.75} />
+            </Link>
+            <p className="mt-auto flex items-start gap-2 border-t border-rule pt-4 text-sm text-muted max-sm:mt-5 sm:mt-6">
+              <Sparkles aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-amber-ink" strokeWidth={1.75} />
+              <span>
+                <span className="font-medium text-ink">Your own design</span> is coming soon.{" "}
+                <a className="link" href={whatsappLink(`Assalam o Alaikum, I’d like custom-designed items for ${business.name}.`)} target="_blank" rel="noopener">
+                  Tell us what you need
+                </a>
+              </span>
+            </p>
+          </li>
+        </ul>
+      </section>
 
-        <div className="grid grid-cols-[minmax(0,1fr)] content-start gap-4">
-          <LinkRow
-            title="Tap card · NFC"
-            hint="Already written on your card and stand. To write a new tag, use the free NFC Tools app: Write → Add record → URL."
-            url={nfc}
-          />
-          <LinkRow title="WhatsApp" hint="Ask on WhatsApp adds this one for you. Paste it yourself in any chat." url={wa} />
-          <LinkRow title="Plain link" hint="For your Instagram bio, receipts or email. Counted as “Plain link”." url={plain} />
+      <section aria-labelledby="links-title" className="mt-10">
+        <SectionTitle>
+          <span id="links-title">Links you share</span>
+        </SectionTitle>
+        <div className="panel divide-y divide-rule">
+          <LinkRow title="WhatsApp" hint="Ask on WhatsApp adds this for you. Paste it yourself in any chat." url={links.wa} />
+          <LinkRow title="Plain link" hint="For your Instagram bio, receipts or email." url={links.plain} />
+        </div>
+      </section>
+    </>
+  );
+}
+
+function ItemCard({ item, top }: { item: ItemRow; top: boolean }) {
+  const p = productOf(item.kind);
+  const off = item.status === "off";
+  const arriving = !off && item.packStatus !== "installed";
+  return (
+    <li className={`panel flex flex-col overflow-hidden ${off ? "bg-[oklch(98.6%_0.002_85)]" : ""}`}>
+      <div className={`relative grid h-36 place-items-center bg-frame ${off ? "opacity-55 grayscale" : ""}`}>
+        <ProductArt kind={item.kind} className="h-28 w-auto" />
+        <span className={`pill absolute top-3 left-3 ${off ? "pill-negative" : arriving ? "pill-notice" : "pill-positive"}`}>
+          {off ? "Switched off" : arriving ? "On the way" : "Working"}
+        </span>
+        {top && <span className="pill absolute top-3 right-3 bg-amber-wash text-amber-ink">Most customers</span>}
+      </div>
+      <div className="flex items-end justify-between gap-4 px-5 pt-4 pb-4">
+        <div className="min-w-0">
+          <h3 className="font-medium">{p.name}</h3>
+          <p className="mt-0.5 text-sm text-muted">
+            {p.scan === "qr+nfc" ? "Scan or tap" : "Tap"} · since {formatDay(item.since)}
+          </p>
+        </div>
+        <div className="shrink-0 text-right">
+          <p className={`num text-2xl leading-8 font-semibold tracking-[-0.02em] ${off || arriving ? "text-faint" : ""}`}>{off || arriving ? "—" : item.scans}</p>
+          <p className="text-xs text-muted">last 30 days</p>
         </div>
       </div>
-
-      <div className="mt-8">
-        <SectionTitle>Where they go</SectionTitle>
-        <p className="max-w-[70ch] text-sm text-muted">
-          Every link opens your review page, which shows every customer the “Review us on Google” button and a private note option. The
-          address never changes, so printed stands keep working even if you rename the business.
-        </p>
-      </div>
-    </>
+      <ItemFooter id={item.id} off={off} name={p.name} code={item.code} />
+    </li>
   );
 }
 
 function LinkRow({ title, hint, url }: { title: string; hint: string; url: string }) {
   return (
-    <section className="panel p-5 sm:p-6">
-      <h2 className="font-medium">{title}</h2>
-      <p className="mt-1 text-sm text-muted">{hint}</p>
-      <div className="mt-4 flex items-stretch">
+    <div className="grid gap-3 p-5 md:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)] md:items-center md:gap-8">
+      <div className="min-w-0">
+        <h3 className="font-medium">{title}</h3>
+        <p className="mt-0.5 text-sm text-muted">{hint}</p>
+      </div>
+      <div className="flex min-w-0 items-stretch">
         <code className="flex min-w-0 flex-1 items-center rounded-l-[10px] border border-r-0 border-control bg-frame px-3 font-mono text-[0.8125rem]">
           <span className="min-w-0 truncate">{url}</span>
         </code>
         <CopyButton text={url} />
       </div>
-    </section>
+    </div>
   );
 }

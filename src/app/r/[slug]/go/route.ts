@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/db";
-import { Business } from "@/models/Business";
+import { resolveEntry } from "@/lib/public";
 import { Event, toSource } from "@/models/Event";
 
 // GET /r/<slug>/go: counts the tap on "Review us on Google", then sends the customer to Google.
@@ -8,10 +7,9 @@ export async function GET(request: Request, { params }: RouteContext<"/r/[slug]/
   const { slug } = await params;
   const url = new URL(request.url);
 
-  await db();
-  const business = await Business.findOne({ slug, status: "active" }).select("_id googleReviewUrl").lean();
-  if (!business?.googleReviewUrl) return new NextResponse(null, { status: 303, headers: { Location: `/r/${slug}` } });
+  const entry = await resolveEntry(slug);
+  if (!entry?.business.googleReviewUrl) return new NextResponse(null, { status: 303, headers: { Location: `/r/${slug}` } });
 
-  await Event.create({ business: business._id, type: "google_click", source: toSource(url.searchParams.get("s")) });
-  return NextResponse.redirect(business.googleReviewUrl, 303);
+  await Event.create({ business: entry.business._id, tag: entry.tag, type: "google_click", source: toSource(url.searchParams.get("s")) });
+  return NextResponse.redirect(entry.business.googleReviewUrl, 303);
 }

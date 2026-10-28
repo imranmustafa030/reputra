@@ -4,6 +4,7 @@ import { ExternalLink, LogOut } from "lucide-react";
 import { AppShell, type ShellData } from "@/components/app-shell";
 import { requireOwner } from "@/lib/auth";
 import { countUnreadNotes } from "@/lib/stats";
+import { businessLinks } from "@/lib/tags";
 import { PLAN_NAMES } from "@/lib/labels";
 import { ScopeCard } from "@/components/scope-card";
 
@@ -29,23 +30,23 @@ async function DemoNotice() {
 
 const shellData = cache(async (): Promise<ShellData> => {
   const { user, business, access } = await requireOwner();
-  const notes = access.state === "none" ? 0 : await countUnreadNotes(business.id);
+  const [notes, links] = await Promise.all([access.state === "none" ? 0 : countUnreadNotes(business.id), businessLinks(business.id)]);
   return {
     scope: <ScopeCard name={business.name} meta={`${access.plan ? `${PLAN_NAMES[access.plan]} plan` : "No plan yet"} · ${business.city}`} />,
     counts: { notes },
     topBar: (
       <a
-        href={`/r/${business.slug}`}
+        href={`${links.plain}?preview=1`} // the opening film every time, and the owner's own look isn't counted
         target="_blank"
         rel="noopener"
-        className="inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-sm text-muted transition-colors hover:bg-hover hover:text-ink"
+        className="inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-sm text-muted transition-colors hover:bg-shell-hover hover:text-ink"
       >
         Your review page
         <ExternalLink aria-hidden="true" className="size-3.5" strokeWidth={1.75} />
       </a>
     ),
     account: (
-      <div className="flex items-center gap-2 border-t border-edge px-1 pt-3">
+      <div className="flex items-center gap-2 border-t border-shell-edge px-1 pt-3">
         <span aria-hidden="true" className="grid size-8 shrink-0 place-items-center rounded-full bg-active text-xs font-semibold">
           {user.name.trim().charAt(0).toUpperCase()}
         </span>
@@ -54,7 +55,7 @@ const shellData = cache(async (): Promise<ShellData> => {
           <span className="block truncate text-xs text-muted">{user.email}</span>
         </span>
         <form action="/logout" method="post">
-          <button type="submit" className="grid size-9 place-items-center rounded-full text-muted hover:bg-hover hover:text-ink" aria-label="Log out" title="Log out">
+          <button type="submit" className="grid size-9 place-items-center rounded-full text-muted hover:bg-shell-hover hover:text-ink" aria-label="Log out" title="Log out">
             <LogOut aria-hidden="true" className="size-4" strokeWidth={1.75} />
           </button>
         </form>

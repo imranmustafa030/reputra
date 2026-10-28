@@ -4,7 +4,7 @@ import { PageHeader } from "@/components/page-header";
 import { Tabs } from "@/components/tabs";
 import { listPayments } from "@/lib/admin";
 import { requireAdmin } from "@/lib/auth";
-import { formatDay, METHOD_NAMES, PAYMENT_STATUS, PLAN_NAMES } from "@/lib/labels";
+import { formatDay, METHOD_NAMES, PAYMENT_STATUS } from "@/lib/labels";
 import { formatPKR } from "@/lib/plans";
 import { PaymentStack } from "../mobile-lists";
 import { PaymentActions } from "../payment-actions";
@@ -39,7 +39,7 @@ export default async function PaymentsPage({ searchParams }: PageProps<"/admin/p
         lede={
           view === "check"
             ? toCheck
-              ? `${toCheck} ${toCheck === 1 ? "transfer" : "transfers"} to match against the bank and wallet apps. The plans are already on.`
+              ? `${toCheck} ${toCheck === 1 ? "transfer" : "transfers"} to match against the bank and wallet apps. Plans are already on; shop orders print once you mark them received.`
               : "Every transfer is matched."
             : `${payments.length} ${payments.length === 1 ? "payment" : "payments"} · ${formatPKR(total)}`
         }
@@ -66,7 +66,7 @@ export default async function PaymentsPage({ searchParams }: PageProps<"/admin/p
                 <th>Business</th>
                 <th>Receipt</th>
                 <th>Paid by</th>
-                <th>Plan</th>
+                <th>For</th>
                 <th className="r">Amount</th>
                 <th className="r">{view === "check" ? "Action" : "Status"}</th>
               </tr>
@@ -93,7 +93,7 @@ export default async function PaymentsPage({ searchParams }: PageProps<"/admin/p
                       </span>
                     </td>
                     <td>
-                      {PLAN_NAMES[p.plan]} <span className="text-muted">· {p.interval === "year" ? "year" : "month"}</span>
+                      {p.what}
                     </td>
                     <td className="r num font-medium whitespace-nowrap">{formatPKR(p.amount)}</td>
                     <td className="r">

@@ -4,9 +4,11 @@ import { redirect } from "next/navigation";
 import { db } from "./db";
 import { getSession } from "./session";
 import { accessFrom, canUseDashboard } from "./billing";
+import type { GooglePlace } from "./google";
 import { User, type Role } from "@/models/User";
-import { Business } from "@/models/Business";
-import { Subscription } from "@/models/Subscription";
+import { Types } from "mongoose";
+import { Business, type BusinessDoc } from "@/models/Business";
+import { Subscription, type SubscriptionDoc } from "@/models/Subscription";
 
 // The data access layer: every dashboard, checkout and admin read starts here, so the
 // session is checked next to the data, not only in proxy.ts. `cache` dedupes it per request.
@@ -26,14 +28,16 @@ export function homeFor(role: Role) {
 }
 
 // An owner and their business, paid or not. Checkout and billing use this one.
+// The user, and the business with its subscription, are fetched side by side (two queries at
+// once instead of three in a row), since both only need the id in the session cookie.
 export const requireOwner = cache(async () => {
-  const user = await getCurrentUser();
+  const { userId } = await getSession();
+  const [user, found] = await Promise.all([getCurrentUser(), userId && Types.ObjectId.isValid(userId) ? businessOf(userId) : null]);
   // /logout clears a stale cookie, so proxy.ts doesn't bounce the visitor back here.
   if (!user) redirect("/logout");
   if (user.role === "admin") redirect("/admin");
-  const business = await Business.findOne({ owner: user.id }).lean();
-  if (!business) redirect("/logout");
-  const subscription = await Subscription.findOne({ business: business._id }).lean();
+  if (!found) redirect("/logout");
+  const { subscription, ...business } = found;
   return {
     user,
     business: {
@@ -43,6 +47,7 @@ export const requireOwner = cache(async () => {
       category: business.category,
       city: business.city,
       googleReviewUrl: business.googleReviewUrl,
+      googlePlace: business.googlePlace ? (business.googlePlace as GooglePlace) : null,
       whatsappMessage: business.whatsappMessage,
       introAnimation: business.introAnimation !== false,
       suspended: business.status === "suspended",
@@ -51,6 +56,18 @@ export const requireOwner = cache(async () => {
     access: accessFrom(subscription),
   };
 });
+
+// One round trip: the owner's business with its subscription joined on.
+async function businessOf(userId: string) {
+  await db();
+  const [row] = await Business.aggregate<BusinessDoc & { _id: Types.ObjectId; subscription: SubscriptionDoc | null }>([
+    { $match: { owner: new Types.ObjectId(userId) } },
+    { $limit: 1 },
+    { $lookup: { from: Subscription.collection.name, localField: "_id", foreignField: "business", as: "subscription" } },
+    { $set: { subscription: { $first: "$subscription" } } },
+  ]);
+  return row ? { ...row, subscription: row.subscription ?? null } : null;
+}
 
 // Every dashboard page except Plan & billing: a paid, unsuspended plan.
 export const requirePaidOwner = cache(async () => {

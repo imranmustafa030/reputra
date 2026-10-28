@@ -128,7 +128,7 @@ export async function resetOwnerPassword(_: FormState, form: FormData): Promise<
   await db();
   const user = await User.findOneAndUpdate(
     { _id: String(form.get("userId")), role: "owner" },
-    { $set: { passwordHash: await bcrypt.hash(password, 10) }, $inc: { sessionVersion: 1 } },
+    { $set: { passwordHash: await bcrypt.hash(password, 10), passwordChangedAt: new Date() }, $inc: { sessionVersion: 1 } },
   );
   if (!user) return { error: "Owner not found." };
   return { ok: password };

@@ -16,6 +16,19 @@ const businessSchema = new Schema(
     category: { type: String, enum: CATEGORIES, default: "other" },
     city: { type: String, default: "Lahore", trim: true, maxlength: 60 },
     googleReviewUrl: { type: String, default: "", trim: true },
+    // The Google listing the review link was made from, when the owner connected it instead of pasting a link.
+    googlePlace: {
+      type: new Schema(
+        {
+          id: { type: String, required: true },
+          name: { type: String, default: "" },
+          address: { type: String, default: "" },
+          via: { type: String, enum: ["search", "account"], required: true }, // picked from Google's list, or from their Google account
+        },
+        { _id: false },
+      ),
+      default: null,
+    },
     whatsappMessage: { type: String, default: DEFAULT_WHATSAPP_MESSAGE, maxlength: 600 },
     // The review page's short opening animation; the owner can turn it off in Settings.
     introAnimation: { type: Boolean, default: true },

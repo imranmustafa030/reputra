@@ -14,11 +14,13 @@ const eventSchema = new Schema({
   business: { type: Schema.Types.ObjectId, ref: "Business", required: true },
   type: { type: String, enum: EVENT_TYPES, required: true },
   source: { type: String, enum: SOURCES, default: "direct" },
+  tag: { type: Schema.Types.ObjectId, ref: "Tag", default: null }, // the item or link it came through
   value: { type: Number, min: 1, max: 5 }, // rating events only
   at: { type: Date, default: Date.now },
 });
 // Stats always ask "this business, since a date".
 eventSchema.index({ business: 1, at: -1 });
+eventSchema.index({ tag: 1, at: -1 }, { partialFilterExpression: { tag: { $type: "objectId" } } });
 
 export type EventDoc = InferSchemaType<typeof eventSchema>;
 export const Event: Model<EventDoc> = models.Event ?? model("Event", eventSchema);

@@ -12,7 +12,7 @@ export function ScopeCard({ name, meta }: { name: string; meta: string }) {
 
   return (
     <div className="flex items-center gap-3 px-1.5 py-1">
-      <span aria-hidden="true" className="grid size-10 shrink-0 place-items-center rounded-[10px] bg-ink text-[0.8125rem] font-semibold tracking-[-0.02em] text-paper">
+      <span aria-hidden="true" className="monogram grid size-10 shrink-0 place-items-center rounded-[10px] bg-ink text-[0.8125rem] font-semibold tracking-[-0.02em] text-paper">
         {initials}
       </span>
       <span className="min-w-0">

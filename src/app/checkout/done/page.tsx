@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { requireOwner } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { formatDay, METHOD_NAMES, PLAN_NAMES } from "@/lib/labels";
+import type { PlanCode } from "@/models/Plan";
 import { formatPKR } from "@/lib/plans";
 import { Payment } from "@/models/Payment";
 
@@ -38,7 +39,7 @@ async function Done({ searchParams }: Pick<PageProps<"/checkout/done">, "searchP
         {payment.firstPayment ? `${business.name} is on Reputra` : "Your plan is renewed"}
       </h1>
       <p className="mt-2 text-muted">
-        {PLAN_NAMES[payment.plan]} plan, paid until {access.paidUntil ? formatDay(access.paidUntil) : "—"}.
+        {PLAN_NAMES[payment.plan as PlanCode]} plan, paid until {access.paidUntil ? formatDay(access.paidUntil) : "—"}.
         {checking && " We’re matching your transfer now; you don’t need to do anything."}
       </p>
 

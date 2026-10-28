@@ -73,12 +73,14 @@ export default async function SetupPacksPage({ searchParams }: PageProps<"/admin
                       <Link href={`/admin/businesses/${p.businessId}`} className="font-medium hover:underline">
                         {p.businessName}
                       </Link>
-                      <span className="block font-mono text-xs text-muted">/r/{p.slug}</span>
+                      <Link href={`/admin/setup-packs/${p.id}`} className="block text-xs text-muted underline-offset-2 hover:text-ink hover:underline">
+                        Print files{p.fromShop ? " · shop order" : ""}
+                      </Link>
                     </td>
                     <td className="max-w-[260px]">
                       {p.address}
                       <span className="block text-xs text-muted">
-                        {p.city} · {p.stands} stand, {p.cards} card
+                        {p.city} · {packContents(p)}
                       </span>
                     </td>
                     <td className="whitespace-nowrap">
@@ -122,4 +124,10 @@ export default async function SetupPacksPage({ searchParams }: PageProps<"/admin
       )}
     </>
   );
+}
+
+// "1 stand, 1 card, 6 stickers": only what's in the pack.
+function packContents(p: { stands: number; cards: number; stickers: number }) {
+  const n = (count: number, one: string, many: string) => (count ? [`${count} ${count === 1 ? one : many}`] : []);
+  return [...n(p.stands, "stand", "stands"), ...n(p.cards, "card", "cards"), ...n(p.stickers, "sticker", "stickers")].join(", ");
 }

@@ -40,7 +40,9 @@ export async function saveSettings(_: FormState, form: FormData): Promise<FormSt
     };
   }
 
-  await Business.updateOne({ _id: business.id }, parsed.data);
+  // A link typed over a connected place replaces it; the same link sent back keeps the connection.
+  const linkChanged = parsed.data.googleReviewUrl !== business.googleReviewUrl;
+  await Business.updateOne({ _id: business.id }, { ...parsed.data, ...(linkChanged ? { googlePlace: null } : {}) });
   updateTag(businessTag(business.slug)); // the public review page shows the new name and link straight away
   revalidatePath("/dashboard", "layout");
   return { ok: "Saved.", values: { ...parsed.data, introAnimation: parsed.data.introAnimation ? "on" : "off" } };

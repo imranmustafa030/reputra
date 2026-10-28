@@ -18,12 +18,12 @@ export type ShellData = {
 
 export function AppShell({ side, load, children }: { side: "owner" | "admin"; load: () => Promise<ShellData>; children: React.ReactNode }) {
   return (
-    <div className="min-h-dvh bg-frame lg:grid lg:grid-cols-[232px_minmax(0,1fr)] lg:grid-rows-[48px_minmax(0,1fr)]">
+    <div className="app-shell min-h-dvh lg:grid lg:grid-cols-[232px_minmax(0,1fr)] lg:grid-rows-[48px_minmax(0,1fr)]">
       <Suspense fallback={<MobileNav side={side} title={null} footer={null} />}>
         <MobileSlot side={side} load={load} />
       </Suspense>
 
-      <aside className="sticky top-0 row-span-2 hidden h-dvh flex-col px-3 pt-3 pb-3 lg:flex">
+      <aside className="shell-zone sticky top-0 row-span-2 hidden h-dvh flex-col px-3 pt-3 pb-3 lg:flex">
         <div className="flex h-9 items-center px-2.5">
           <Brand href={side === "admin" ? "/admin" : "/dashboard"} className="text-[1.15rem]" />
         </div>
@@ -44,13 +44,13 @@ export function AppShell({ side, load, children }: { side: "owner" | "admin"; lo
         </div>
       </aside>
 
-      <div className="hidden items-center justify-end gap-2 pr-4 pl-6 lg:flex">
+      <div className="shell-zone hidden items-center justify-end gap-2 pr-4 pl-6 lg:flex">
         <Suspense>
           <Slot load={load} pick="topBar" />
         </Suspense>
       </div>
 
-      <main className="min-w-0 bg-sheet px-4 pt-6 pb-16 sm:px-6 lg:mr-2 lg:mb-2 lg:rounded-2xl lg:border lg:border-edge lg:px-8 lg:pt-7 lg:pb-12">
+      <main className="app-sheet min-w-0 bg-sheet px-4 pt-6 pb-16 sm:px-6 lg:mr-2 lg:mb-2 lg:rounded-2xl lg:border lg:border-edge lg:px-8 lg:pt-7 lg:pb-12">
         <div className="mx-auto w-full max-w-[1240px]">{children}</div>
       </main>
     </div>
@@ -67,6 +67,6 @@ async function CountedNav({ side, load }: { side: "owner" | "admin"; load: () =>
 }
 
 async function MobileSlot({ side, load }: { side: "owner" | "admin"; load: () => Promise<ShellData> }) {
-  const { scope, counts, account } = await load();
-  return <MobileNav side={side} counts={counts} title={scope} footer={account} />;
+  const { scope, counts, account, topBar } = await load();
+  return <MobileNav side={side} counts={counts} title={scope} footer={account} extra={topBar} />;
 }

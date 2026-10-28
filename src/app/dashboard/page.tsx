@@ -10,7 +10,7 @@ import { PageHeader, SectionTitle } from "@/components/page-header";
 import { requirePaidOwner } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { formatDay, formatWhen, PACK_STEPS, PLAN_NAMES } from "@/lib/labels";
-import { reviewLink } from "@/lib/links";
+import { businessLinks } from "@/lib/tags";
 import { formatPKR } from "@/lib/plans";
 import { countUnreadNotes, firstCounterVisit, getDaily, getFeedback, getStats, SOURCE_LABELS } from "@/lib/stats";
 import { Payment } from "@/models/Payment";
@@ -38,7 +38,7 @@ async function Overview() {
     SetupPack.findOne({ business: business.id, status: { $ne: "canceled" } }).sort({ createdAt: -1 }).lean(),
     firstCounterVisit(business.id),
     Payment.findOne({ business: business.id, status: "submitted" }).sort({ createdAt: -1 }).lean(),
-    reviewLink(business.slug, "direct"),
+    businessLinks(business.id).then((l) => l.plain),
   ]);
 
   const packIndex = pack ? PACK_STEPS.findIndex((s) => s.status === pack.status) : -1;

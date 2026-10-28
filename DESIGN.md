@@ -6,6 +6,9 @@ colors:
   ink-3: "oklch(32% 0.006 265)"
   paper: "oklch(99.4% 0.001 265)"
   frame: "oklch(96.6% 0.0035 85)"
+  shell: "oklch(17.5% 0.008 70)"
+  shell-hover: "oklch(27% 0.014 72)"
+  shell-edge: "oklch(31% 0.012 72)"
   sheet: "#ffffff"
   edge: "oklch(91.8% 0.004 85)"
   rule: "oklch(95.2% 0.003 85)"
@@ -116,11 +119,11 @@ The website (`public/`, documented in `../website/DESIGN.md`) persuades. These a
 
 ## Overview
 
-**North star: the counter ledger.** An owner glances between customers. The team checks payments over a cup of tea. Both need the screen to answer one question in five seconds and offer the one action that follows. A warm stone frame holds a white sheet; on the sheet, ink does the talking and amber appears only where a customer went to Google or a step is in hand.
+**North star: the counter ledger.** An owner glances between customers. The team checks payments over a cup of tea. Both need the screen to answer one question in five seconds and offer the one action that follows. An ink frame, lit by a soft pool of amber behind the logo, holds a white sheet that glows in the middle; on the sheet, ink does the talking and amber appears only where a customer went to Google or a step is in hand.
 
 Key characteristics:
-- One tinted L-frame (sidebar + 48px top bar, no rule between them) around a white sheet inset 8px from the window's right and bottom edges, 16px radius, 1px edge, no shadow. On phones the frame folds into a 56px top bar and a full-screen menu.
-- Colour on data, not chrome: under 3% of pixels carry hue.
+- One warm-ink L-frame (sidebar + 48px top bar, no rule between them) around a white sheet inset 8px from the window's right and bottom edges, 16px radius, 1px edge, no shadow. On phones the frame folds into a 56px top bar and a full-screen menu.
+- Colour on data, not chrome: inside the sheet under 3% of pixels carry hue. The ink frame around it carries the brand: an amber glow, the amber monogram and attention counts.
 - Figures are type, not tiles: label above value, tabular figures, no icons in circles, no sparklines.
 - Honest data: zeros print as 0, missing values as a grey dash, demo accounts say so.
 
@@ -133,7 +136,8 @@ Key characteristics:
 - **Review-star amber** (`amber`): the daily bars of customers sent to Google, the underline on the step in hand, "New" marks (as `amber-wash` with `amber-ink` text). Never a button fill on working screens, never a badge of praise.
 
 ### Neutral
-- **Frame** (`frame`): the warm stone L around the sheet and wells inside cards.
+- **Shell** (`shell`): the ink-and-gold L around the sheet (sidebar, top bar, phone menu): the website's warm near-black with a fine grain, an amber glow behind the logo and a softer one bottom right (`.app-shell`). Its parts (`.shell-zone`) re-point the text tokens to light (ink 97.5% L, ink-3 86%, muted 72%); the selected nav row stays a white piece of the sheet with ink type, fields stay white with ink type, and the monogram tile and attention counts turn amber. The sheet sits on a deep soft shadow instead of an edge. Chosen by the owner (28 Oct 2026) over a pale honey and a champagne version, to feel premium and alive.
+- **Frame** (`frame`): warm stone for wells and quiet blocks inside the sheet (copy-link boxes, payment details, the demo note).
 - **Sheet** (white), **edge** (card and sheet borders), **rule** (row rules, one step lighter), **control** (input and button borders, one step darker).
 - **Hover** and **active**: two quiet tone steps (hover rows, count chips, avatars). The selected nav row is not a tone step: it is white, like the sheet.
 - **Muted** (6:1 on white) for secondary text; **faint** for placeholders and meta (≥4.5:1).
@@ -142,7 +146,7 @@ Key characteristics:
 Pale wash with dark text of the same hue: positive (Paid, Done, Installed), notice (Checking, Renews soon, Payment due), negative (Not received, Lapsed, Paused).
 
 ### Named rules
-**The One Hue Rule.** Amber marks the result (Google) and the step in hand. Everything else is ink and stone.
+**The One Hue Rule.** Inside the sheet, saturated amber marks only the result (Google) and the step in hand. On the ink frame, amber is the brand light: the glow, the monogram, the attention counts.
 **The Status-Is-Wash Rule.** Status pills are pale washes with dark text; saturated fills with white text are not used.
 
 ## Typography
@@ -171,7 +175,7 @@ One family, Geist, for everything; Geist Mono only for identifiers (receipt numb
 
 ## Elevation & Depth
 
-Flat. Separation is a 1px edge or one tone step. The only shadows: the 1px lift of the selected segment in a segmented control and of the selected sidebar row, and inset 2px underlines used as markers (the step in hand, the selected plan's 1px ink ring). Overlays (the phone menu) are opaque full-screen sheets.
+Flat. Separation is a 1px edge or one tone step. The only shadows: the deep soft shadow the sheet sits on over the ink frame, the 1px lift of the selected segment in a segmented control and of the selected sidebar row, and inset 2px underlines used as markers (the step in hand, the selected plan's 1px ink ring). Overlays (the phone menu) are opaque full-screen sheets.
 
 ## Shapes
 
@@ -220,7 +224,7 @@ One vocabulary in `globals.css`: expo-out (`cubic-bezier(.16,1,.3,1)`) for arriv
 - **Do** keep amber on the Google result and the step in hand only.
 
 ### Don't:
-- **Don't** use a dark or saturated sidebar, a welcome banner, icons in tinted circles, sparklines or gradient charts.
+- **Don't** use a saturated or coloured-fill sidebar (the ink frame is the one dark surface), a welcome banner, icons in tinted circles, sparklines or gradient charts.
 - **Don't** show placeholder payment details or invented proof ("Most choose this", customer counts) to owners.
 - **Don't** fill a column of row buttons in black; row actions are secondary pills.
 - **Don't** put a card inside a card, or stretch a short card to its neighbour's height.
