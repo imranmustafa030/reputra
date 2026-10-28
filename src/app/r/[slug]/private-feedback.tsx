@@ -28,27 +28,47 @@ export function PrivateFeedback({
   const form = useRef<HTMLFormElement>(null);
   const box = useRef<HTMLTextAreaElement>(null);
 
-  // Puts the note's top edge just under the top of the screen, clear of the phone keyboard.
-  const place = (smooth: boolean) => {
-    const el = form.current;
-    if (!el) return;
-    const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
-    window.scrollTo({
-      top: el.getBoundingClientRect().top + window.scrollY - 16,
-      behavior: smooth && !still ? "smooth" : "auto",
-    });
+  const stopGlide = useRef<() => void>(() => {});
+
+  // One continuous glide that brings the note's top edge to just under the top of the screen,
+  // clear of the phone keyboard. It re-reads where the note is on every frame, so when the
+  // keyboard slides up and the page shifts, the glide bends to follow instead of jumping or
+  // restarting. A touch stops it at once, so it never fights the customer's finger.
+  const glide = () => {
+    stopGlide.current();
+    // never past the page's real end, so the glide slows into place instead of hitting the bottom
+    const target = () => {
+      const el = form.current;
+      const end = document.documentElement.scrollHeight - window.innerHeight;
+      return el ? Math.min(end, Math.max(0, el.getBoundingClientRect().top + window.scrollY - 16)) : window.scrollY;
+    };
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      window.scrollTo(0, target());
+      return;
+    }
+    const from = window.scrollY;
+    const start = performance.now();
+    const duration = 620;
+    let frame = 0;
+    const stop = () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener("touchstart", stop);
+      window.removeEventListener("wheel", stop);
+    };
+    const step = (now: number) => {
+      const p = Math.min(1, (now - start) / duration);
+      const eased = p === 1 ? 1 : 1 - Math.pow(2, -10 * p); // expo-out, like the rest of the page
+      window.scrollTo(0, from + (target() - from) * eased);
+      if (p < 1) frame = requestAnimationFrame(step);
+      else stop();
+    };
+    window.addEventListener("touchstart", stop, { passive: true });
+    window.addEventListener("wheel", stop, { passive: true });
+    frame = requestAnimationFrame(step);
+    stopGlide.current = stop;
   };
 
-  // While the keyboard slides up (iPhone resizes the visible area in steps and scrolls on its
-  // own), the note is put back at the top each time, for the first moment after opening.
-  useEffect(() => {
-    if (!open) return;
-    const vv = window.visualViewport;
-    const until = Date.now() + 1200;
-    const onResize = () => Date.now() < until && place(false);
-    vv?.addEventListener("resize", onResize);
-    return () => vv?.removeEventListener("resize", onResize);
-  }, [open]);
+  useEffect(() => () => stopGlide.current(), []);
 
   // Opens the note inside the tap itself: iPhone only shows the keyboard for a field focused
   // during the tap. The note renders at full size at once (it fades and rises, it doesn't grow),
@@ -59,7 +79,7 @@ export function PrivateFeedback({
       setOpen(true);
     });
     box.current?.focus({ preventScroll: true });
-    place(true);
+    glide();
   }
 
   if (state?.ok) {
