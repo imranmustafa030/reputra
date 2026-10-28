@@ -6,14 +6,19 @@ import type { Category } from "@/models/Business";
 // so every review is genuinely theirs and worded differently (Google filters copy-paste praise).
 // Gemini's free tier does the writing; without a key, or if it's slow or over its daily limit,
 // the drafts are put together from the picks with plain sentence templates, so the page never
-// breaks. Chips for each business come from the owner's description, made once when it's saved.
+// breaks. The owner's description never reaches the drafts (a small model lets its details slip
+// in, which would put words in the customer's mouth); it shapes the picks instead, made once
+// when it's saved.
 
 export type Lang = "en" | "roman" | "ur";
 export type Drafts = { veryShort: string; short: string; medium: string };
 export type Chips = Record<Lang, string[]>;
 
-const MODEL = () => process.env.GEMINI_MODEL || "gemini-flash-latest";
-const TIMEOUT_MS = 8000;
+// The light Flash model with thinking kept to a minimum: short reviews need no reasoning, and it
+// answers in about 3 seconds where the full model, thinking first, took over 30.
+const MODEL = () => process.env.GEMINI_MODEL || "gemini-flash-lite-latest";
+const THINKING = () => process.env.GEMINI_THINKING || "minimal";
+const TIMEOUT_MS = 9000;
 
 const LANGUAGE: Record<Lang, string> = {
   en: "English. Plain, natural, everyday English as a customer in Pakistan would write it.",
@@ -27,14 +32,17 @@ const LANGUAGE: Record<Lang, string> = {
 const DRAFTS_SYSTEM = `You help a real customer put their own experience of a local business into words for a Google review. You are writing in the customer's voice, in the first person.
 
 Honesty rules (most important):
-- Use ONLY what the customer picked or wrote. The business description is background so you understand the place; never mention a dish, service, price or detail from it unless the customer picked it.
+- Use ONLY what the customer picked or wrote.
 - Never invent facts, names, prices, dates, numbers, staff names, or comparisons with other businesses.
+- The longer versions are longer because of how the customer felt (enjoyed it, would come back, would recommend it), never because of extra details. Do not add an atmosphere, a dish, a use of the place or anything else the customer did not pick or write.
 - Match the star rating. 5: warm and clearly positive. 4: positive, can be a little measured. 3: balanced, fair. 1-2: honest and calm about what was wrong, never insulting, no threats, no all-caps.
 - Never say the review was written by AI or suggested, never ask for anything in return, never mention discounts or offers.
 
 Style rules:
 - Sound like a real person, not marketing. Simple words. No hashtags, no emojis, no exclamation marks in a row, at most one exclamation mark in total.
 - Mention the business name at most once, and not in the very short version.
+- Write the business name exactly as given, in its own letters; never transliterate it into another script. In Urdu script, leave the name out.
+- In Urdu and Roman Urdu, the customer may be a man or a woman: never use first-person verbs that show gender (gaya/gayi, aaunga/aaungi, karunga, گیا/گئی, کروں گا/گی, آؤں گا/گی). Use neutral forms: "hamara visit acha raha", "dobara zaroor aana hai", "yahan aa kar acha laga", "ہمارا وزٹ اچھا رہا", "دوبارہ ضرور آنا ہے", "یہاں آ کر اچھا لگا".
 - Each of the three versions must open differently and use different wording, not be the same sentence made longer.
 - Lengths: very_short is 3 to 10 words. short is 12 to 25 words, one or two sentences. medium is 28 to 55 words, two to four sentences.
 
@@ -77,7 +85,7 @@ async function gemini<T>(system: string, prompt: string, schema: object, tempera
       body: JSON.stringify({
         systemInstruction: { parts: [{ text: system }] },
         contents: [{ role: "user", parts: [{ text: prompt }] }],
-        generationConfig: { temperature, responseMimeType: "application/json", responseSchema: schema },
+        generationConfig: { temperature, responseMimeType: "application/json", responseSchema: schema, thinkingConfig: { thinkingLevel: THINKING() } },
       }),
       signal: controller.signal,
       cache: "no-store",
@@ -111,7 +119,6 @@ export type DraftInput = { name: string; category: Category; description: string
 export async function writeDrafts(input: DraftInput): Promise<{ drafts: Drafts; ai: boolean }> {
   const prompt = [
     `Business: ${input.name} (${input.category}).`,
-    input.description ? `About the business (background only): ${input.description}` : "",
     `Stars the customer gave: ${input.rating} out of 5.`,
     input.picks.length ? `What the customer liked: ${input.picks.join("; ")}.` : "",
     input.issues.length ? `What the customer felt could be better: ${input.issues.join("; ")}.` : "",
@@ -123,8 +130,17 @@ export async function writeDrafts(input: DraftInput): Promise<{ drafts: Drafts; 
     .join("\n");
   const out = await gemini<{ very_short?: string; short?: string; medium?: string }>(DRAFTS_SYSTEM, prompt, DRAFTS_SCHEMA, 0.95);
   const drafts = out && { veryShort: clean(out.very_short, 120), short: clean(out.short, 260), medium: clean(out.medium, 480) };
-  if (drafts && drafts.veryShort && drafts.short && drafts.medium) return { drafts, ai: true };
+  if (drafts && [drafts.veryShort, drafts.short, drafts.medium].every((d) => d && rightScript(d, input.lang))) return { drafts, ai: true };
   return { drafts: templateDrafts(input), ai: false };
+}
+
+// A small model now and then slips into another script (a name in Bengali letters inside Urdu,
+// Urdu letters in Roman Urdu). Such a draft is thrown away rather than shown.
+const INDIC = /[\u0900-\u0DFF]/;
+const ARABIC = /[\u0600-\u06FF]/;
+function rightScript(text: string, lang: Lang) {
+  if (INDIC.test(text)) return false;
+  return lang === "ur" ? ARABIC.test(text) : !ARABIC.test(text);
 }
 
 export async function suggestChips(input: { name: string; category: Category; description: string }): Promise<Chips | null> {
