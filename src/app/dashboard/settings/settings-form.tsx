@@ -7,13 +7,16 @@ import { FormMessage, SubmitButton } from "@/components/form";
 import { fillMessage } from "@/lib/format";
 import { CATEGORY_NAMES } from "@/lib/labels";
 
-type Business = { name: string; category: string; city: string; googleReviewUrl: string; whatsappMessage: string };
+type Business = { name: string; category: string; city: string; googleReviewUrl: string; whatsappMessage: string; introAnimation: boolean };
+type TextKey = Exclude<keyof Business, "introAnimation">;
 
 // Settings in rows: what a section is on the left, its fields on the right. One Save for the business.
 export function SettingsForm({ business, pageUrl, waLink }: { business: Business; pageUrl: string; waLink: string }) {
   const [state, action] = useActionState(saveSettings, undefined);
-  const value = (key: keyof Business) => state?.values?.[key] ?? business[key];
+  const value = (key: TextKey) => state?.values?.[key] ?? business[key];
   const [message, setMessage] = useState(business.whatsappMessage);
+  const [intro, setIntro] = useState(business.introAnimation);
+  const previewHref = `${pageUrl}${pageUrl.includes("?") ? "&" : "?"}preview=1`;
 
   return (
     <form action={action} className="max-w-[1080px]">
@@ -90,6 +93,30 @@ export function SettingsForm({ business, pageUrl, waLink }: { business: Business
         <div className="mt-2 rounded-2xl rounded-tl-md bg-[oklch(95%_0.04_150)] p-4 text-sm leading-relaxed break-words whitespace-pre-wrap">
           {fillMessage(message, { name: "Ali", business: value("name"), link: waLink })}
         </div>
+      </Row>
+
+      <Row id="opening" title="Opening animation" description="What a customer sees for the first few seconds after scanning your stand or tapping your card.">
+        <label className="flex cursor-pointer items-start gap-4">
+          <input
+            type="checkbox"
+            role="switch"
+            name="introAnimation"
+            checked={intro}
+            onChange={(e) => setIntro(e.target.checked)}
+            className="switch mt-0.5"
+          />
+          <span>
+            <span className="block font-medium">{intro ? "On" : "Off"}</span>
+            <span className="mt-1 block text-sm text-muted">
+              {intro
+                ? "Your page opens with a two-second film of the Reputra tap card, then your name, then the stars. It plays once per visit, customers can tap to skip it, and it never plays on phones set to reduce motion or to save data."
+                : "Your page opens straight on the stars."}
+            </span>
+          </span>
+        </label>
+        <a href={previewHref} target="_blank" rel="noopener" className="link mt-4 inline-flex text-sm">
+          Preview your page
+        </a>
       </Row>
 
       <div className="flex flex-wrap items-center justify-end gap-4 border-t border-edge pt-6 lg:pl-[calc(min(36%,340px)+48px)]">

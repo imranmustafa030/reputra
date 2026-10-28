@@ -27,19 +27,23 @@ const settingsSchema = z.object({
     .min(10, "The WhatsApp message is too short.")
     .max(600, "Keep the WhatsApp message under 600 characters.")
     .refine((v) => v.includes("{link}"), { message: "Keep {link} in the WhatsApp message, so the customer gets the review page." }),
+  introAnimation: z.preprocess((v) => v === "on", z.boolean()),
 });
 
 export async function saveSettings(_: FormState, form: FormData): Promise<FormState> {
   const { business } = await requirePaidOwner();
   const parsed = settingsSchema.safeParse(Object.fromEntries(form));
   if (!parsed.success) {
-    return { error: parsed.error.issues[0].message, values: keep(form, "name", "category", "city", "googleReviewUrl", "whatsappMessage") };
+    return {
+      error: parsed.error.issues[0].message,
+      values: { ...keep(form, "name", "category", "city", "googleReviewUrl", "whatsappMessage"), introAnimation: form.get("introAnimation") === "on" ? "on" : "off" },
+    };
   }
 
   await Business.updateOne({ _id: business.id }, parsed.data);
   updateTag(businessTag(business.slug)); // the public review page shows the new name and link straight away
   revalidatePath("/dashboard", "layout");
-  return { ok: "Saved.", values: parsed.data };
+  return { ok: "Saved.", values: { ...parsed.data, introAnimation: parsed.data.introAnimation ? "on" : "off" } };
 }
 
 // Called when the owner opens WhatsApp from the sender. Only the count is kept, never the number.

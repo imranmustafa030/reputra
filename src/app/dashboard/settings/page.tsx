@@ -18,6 +18,7 @@ export default async function SettingsPage() {
           city: business.city,
           googleReviewUrl: business.googleReviewUrl,
           whatsappMessage: business.whatsappMessage,
+          introAnimation: business.introAnimation !== false,
         }}
         pageUrl={await reviewLink(business.slug, "direct")}
         waLink={await reviewLink(business.slug, "wa")}

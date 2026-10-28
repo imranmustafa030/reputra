@@ -14,6 +14,8 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // The marketing website (plain HTML/JS) is served as-is from public/.
     "public/**",
+    // The intro film is its own Remotion project, rendered to public/film/.
+    "film/**",
   ]),
 ]);
 

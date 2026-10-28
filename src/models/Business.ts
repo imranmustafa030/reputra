@@ -17,6 +17,8 @@ const businessSchema = new Schema(
     city: { type: String, default: "Lahore", trim: true, maxlength: 60 },
     googleReviewUrl: { type: String, default: "", trim: true },
     whatsappMessage: { type: String, default: DEFAULT_WHATSAPP_MESSAGE, maxlength: 600 },
+    // The review page's short opening animation; the owner can turn it off in Settings.
+    introAnimation: { type: Boolean, default: true },
     // Suspended by the Reputra team: the dashboard locks and the review page stops working.
     status: { type: String, enum: ["active", "suspended"], default: "active" },
     adminNote: { type: String, default: "", maxlength: 2000 }, // internal, never shown to the owner

@@ -6,8 +6,9 @@ import { COPY, LANG_NAMES, LANGS, type Lang } from "./copy";
 import { PrivateFeedback } from "./private-feedback";
 
 type Props = {
-  business: { name: string; slug: string; hasGoogleLink: boolean };
+  business: { name: string; slug: string; hasGoogleLink: boolean; intro: boolean };
   source: string;
+  preview?: boolean;
 };
 
 const LANG_KEY = "reputra:lang";
@@ -42,7 +43,7 @@ const SPARKS = Array.from({ length: 12 }, (_, i) => {
 // The customer's whole visit to Reputra: tap the stars, then choose Google or a private note.
 // Both choices are shown for every rating, the same way: Google's rules forbid steering only
 // happy customers to a review. The stars are recorded so the owner learns how visits felt.
-export function ReviewFlow({ business, source }: Props) {
+export function ReviewFlow({ business, source, preview = false }: Props) {
   const stored = useSyncExternalStore(noSubscribe, savedLang, () => "en" as Lang);
   const [picked, setPicked] = useState<Lang | null>(null);
   const lang = picked ?? stored;
@@ -73,7 +74,7 @@ export function ReviewFlow({ business, source }: Props) {
 
   // One rating per tab, sent when the customer acts, leaves, or has settled for a few seconds.
   const flush = useCallback(() => {
-    if (sent.current || !latest.current) return;
+    if (sent.current || !latest.current || preview) return;
     sent.current = true;
     try {
       if (sessionStorage.getItem(`reputra:rated:${business.slug}`)) return;
@@ -90,7 +91,7 @@ export function ReviewFlow({ business, source }: Props) {
       }),
       keepalive: true,
     }).catch(() => {});
-  }, [business.slug, source]);
+  }, [business.slug, source, preview]);
 
   useEffect(() => {
     if (!rating) return;
@@ -136,7 +137,7 @@ export function ReviewFlow({ business, source }: Props) {
   return (
     <div
       ref={root}
-      className={`flex flex-1 flex-col ${rtl ? "font-urdu" : ""}`}
+      className={`flex flex-1 flex-col ${business.intro ? "rv-with-intro" : ""} ${rtl ? "font-urdu" : ""}`}
       dir={rtl ? "rtl" : "ltr"}
       lang={lang === "ur" ? "ur" : lang === "roman" ? "ur-Latn" : "en"}
     >

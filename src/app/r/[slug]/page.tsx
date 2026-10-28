@@ -4,6 +4,8 @@ import type { Metadata } from "next";
 import { Noto_Nastaliq_Urdu } from "next/font/google";
 import { getPublicBusiness } from "@/lib/public";
 import { toSource } from "@/models/Event";
+import { COPY } from "./copy";
+import { FilmStage, Intro } from "./intro";
 import { ReviewFlow } from "./review-flow";
 import { VisitBeacon } from "./visit-beacon";
 
@@ -18,6 +20,8 @@ const nastaliq = Noto_Nastaliq_Urdu({ subsets: ["arabic"], weight: ["400", "600"
 export default function ReviewPage({ params, searchParams }: PageProps<"/r/[slug]">) {
   return (
     <main data-theme="light" className={`rv-page relative flex min-h-dvh flex-col overflow-hidden bg-(--rv-bg) px-5 pt-6 pb-8 text-(--rv-fg) ${nastaliq.variable}`}>
+      {/* in the static shell, so the opening film starts downloading with the first bytes */}
+      <FilmStage />
       <div className="relative mx-auto flex w-full max-w-[440px] flex-1 flex-col lg:max-w-[1320px] lg:px-[2vw]">
         <Suspense fallback={<Skeleton />}>
           <Review params={params} searchParams={searchParams} />
@@ -36,11 +40,20 @@ async function Review({ params, searchParams }: Pick<PageProps<"/r/[slug]">, "pa
   const business = await getPublicBusiness(slug);
   if (!business) notFound();
   const source = toSource(query.s);
+  // The owner's "Preview" link from Settings: plays the opening every time and counts nothing.
+  const preview = query.preview === "1";
 
   return (
     <>
-      <VisitBeacon slug={business.slug} source={source} />
-      <ReviewFlow business={business} source={source} />
+      <Intro
+        enabled={business.intro}
+        name={business.name}
+        slug={business.slug}
+        force={preview}
+        thanks={{ en: COPY.en.thanks, roman: COPY.roman.thanks, ur: COPY.ur.thanks }}
+      />
+      {!preview && <VisitBeacon slug={business.slug} source={source} />}
+      <ReviewFlow business={business} source={source} preview={preview} />
     </>
   );
 }

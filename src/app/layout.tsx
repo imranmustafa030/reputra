@@ -7,7 +7,8 @@ import "./globals.css";
 // The marketing website at "/" is public/index.html and does not use it.
 
 const geist = Geist({ variable: "--font-geist", subsets: ["latin"] });
-const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
+// Mono is only used in the dashboard, so it is not preloaded on every page (the review page is the hot path).
+const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"], preload: false });
 
 export const metadata: Metadata = {
   title: { default: "Reputra", template: "%s · Reputra" },
@@ -23,7 +24,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${geist.variable} ${geistMono.variable}`}>
+    <html lang="en" suppressHydrationWarning className={`${geist.variable} ${geistMono.variable}`}>
       <body className="min-h-dvh bg-frame font-sans text-ink antialiased">
         <MotionProvider>{children}</MotionProvider>
       </body>
