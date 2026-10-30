@@ -489,7 +489,8 @@ export function ThanksStep({ t, rtl, kind, name, onAgain }: { t: Copy; rtl: bool
           </svg>
         </span>
       </span>
-      <h2 className={`rv-done-title mt-9 ${rtl ? "leading-[1.6]" : ""}`}>{t.done.title}</h2>
+      {/* Urdu: the room above is padding, not margin, so the box holds the tall strokes of ک and گ (Safari clips at the box) */}
+      <h2 className={`rv-done-title ${rtl ? "mt-6 pt-3 leading-[1.6]" : "mt-9"}`}>{t.done.title}</h2>
       <p className="rv-done-text mt-3 max-w-[26ch] text-[1.05rem] leading-relaxed text-(--rv-fg2)">{kind === "google" ? t.done.google(name) : t.done.note}</p>
       <p className="rv-done-sign mt-6 flex items-center gap-2 text-sm text-(--rv-fg3)">
         <span aria-hidden="true" className="h-px w-6 bg-(--rv-line)" />

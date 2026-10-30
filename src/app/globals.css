@@ -58,7 +58,7 @@
    spacing wasn't made for, so lines got cut). */
 .font-urdu {
   /* Geist first: it has no Urdu letters, so those fall to Nastaliq while names and numbers stay Geist */
-  font-family: var(--font-geist), var(--font-nastaliq), "Noto Nastaliq Urdu", serif;
+  font-family: var(--font-geist), var(--font-nastaliq, "Noto Nastaliq Urdu"), "Noto Nastaliq Urdu", serif;
 }
 
 @layer base {
@@ -544,6 +544,9 @@
    starting state lives inside prefers-reduced-motion: no-preference, so the
    finished state is what reduced-motion users (and failed scripts) see. */
 
+/* Entrances only say where they start, so they fill "backwards", never "both": the end state is the
+   element's own style either way, and a fill that outlives the animation keeps Safari drawing the
+   element on its own layer, sized to the font's stated height, which cut off Nastaliq's tall strokes. */
 @keyframes rise {
   from {
     opacity: 0;
@@ -616,21 +619,21 @@
 @media (prefers-reduced-motion: no-preference) {
   /* A screen's parts arrive in reading order, once. --i sets the order. */
   .enter {
-    animation: rise 520ms var(--ease-out-expo) both;
+    animation: rise 520ms var(--ease-out-expo) backwards;
     animation-delay: calc(var(--i, 0) * 55ms);
   }
   .page-enter {
-    animation: rise 320ms var(--ease-out-quint) both;
+    animation: rise 320ms var(--ease-out-quint) backwards;
     --rise: 6px;
   }
   .grow-bar {
     transform-origin: bottom;
-    animation: grow-y 700ms var(--ease-out-expo) both;
+    animation: grow-y 700ms var(--ease-out-expo) backwards;
     animation-delay: calc(var(--i, 0) * 14ms + 120ms);
   }
   .grow-line {
     transform-origin: left;
-    animation: grow-x 600ms var(--ease-out-expo) both;
+    animation: grow-x 600ms var(--ease-out-expo) backwards;
     animation-delay: var(--d, 200ms);
   }
   .pop {
@@ -815,7 +818,7 @@
 
 @media (prefers-reduced-motion: no-preference) {
   .rv-in {
-    animation: rise 700ms var(--ease-out-expo) both;
+    animation: rise 700ms var(--ease-out-expo) backwards;
     animation-delay: var(--d, 0ms);
     --rise: 14px;
   }
@@ -835,19 +838,19 @@
     animation-delay: var(--sd, 0ms);
   }
   .rv-word {
-    animation: rise 320ms var(--ease-out-quint) both;
+    animation: rise 320ms var(--ease-out-quint) backwards;
     --rise: 6px;
   }
   .rv-sent {
-    animation: rise 520ms var(--ease-out-expo) both;
+    animation: rise 520ms var(--ease-out-expo) backwards;
   }
   .rv-check-ring {
     --len: 114;
-    animation: draw 700ms var(--ease-out-quint) both;
+    animation: draw 700ms var(--ease-out-quint) backwards;
   }
   .rv-check-tick {
     --len: 26;
-    animation: draw 420ms var(--ease-out-quint) 420ms both;
+    animation: draw 420ms var(--ease-out-quint) 420ms backwards;
   }
   .rv-shake {
     animation: shake 360ms var(--ease-out-quint);
@@ -890,11 +893,11 @@
 @media (prefers-reduced-motion: no-preference) {
   .done-mark .ring-line {
     --len: 164;
-    animation: draw 800ms var(--ease-out-quint) both;
+    animation: draw 800ms var(--ease-out-quint) backwards;
   }
   .done-mark .tick-line {
     --len: 34;
-    animation: draw 460ms var(--ease-out-quint) 480ms both;
+    animation: draw 460ms var(--ease-out-quint) 480ms backwards;
   }
   .done-mark .wave {
     animation: ripple 1400ms var(--ease-out-quint) 700ms;
@@ -1241,12 +1244,12 @@ body:has(.rv-page[data-theme="light"]) {
     animation: rv-drift 26s ease-in-out -9s infinite alternate-reverse;
   }
   .rv-chip {
-    animation: rise 520ms var(--ease-out-expo) both;
+    animation: rise 520ms var(--ease-out-expo) backwards;
     animation-delay: calc(var(--i, 0) * 35ms + 80ms);
     --rise: 8px;
   }
   .rv-draft {
-    animation: rv-materialize 680ms var(--ease-out-expo) both;
+    animation: rv-materialize 680ms var(--ease-out-expo) backwards;
     animation-delay: calc(var(--i, 0) * 90ms);
   }
   .rv-pop {
@@ -1407,7 +1410,7 @@ body:has(.rv-page[data-theme="light"]) {
     animation-delay: calc(var(--i, 0) * 80ms);
   }
   .rv-done-sign {
-    animation: rise 700ms var(--ease-out-expo) 560ms both;
+    animation: rise 700ms var(--ease-out-expo) 560ms backwards;
     --rise: 10px;
   }
 }
@@ -1434,7 +1437,7 @@ body:has(.rv-page[data-theme="light"]) {
   animation: rv-recede 240ms var(--ease-out-quint) both;
 }
 ::view-transition-new(rv-screen) {
-  animation: rv-forward 560ms var(--ease-out-expo) both;
+  animation: rv-forward 560ms var(--ease-out-expo) backwards;
 }
 :root[data-rv-dir="back"]::view-transition-old(rv-screen) {
   animation-name: rv-sink;
@@ -1478,10 +1481,10 @@ body:has(.rv-page[data-theme="light"]) {
 }
 @media (prefers-reduced-motion: no-preference) {
   .rv-enter-fwd {
-    animation: rv-forward 560ms var(--ease-out-expo) both;
+    animation: rv-forward 560ms var(--ease-out-expo) backwards;
   }
   .rv-enter-back {
-    animation: rv-rise-back 560ms var(--ease-out-expo) both;
+    animation: rv-rise-back 560ms var(--ease-out-expo) backwards;
   }
   .rv-done-disc {
     animation: pop 640ms var(--ease-out-expo) 120ms both;
@@ -1496,15 +1499,15 @@ body:has(.rv-page[data-theme="light"]) {
     animation-delay: 2.43s;
   }
   .rv-done-title {
-    animation: rise 700ms var(--ease-out-expo) 320ms both;
+    animation: rise 700ms var(--ease-out-expo) 320ms backwards;
     --rise: 16px;
   }
   .rv-done-text {
-    animation: rise 700ms var(--ease-out-expo) 440ms both;
+    animation: rise 700ms var(--ease-out-expo) 440ms backwards;
     --rise: 12px;
   }
   .rv-reply-fields {
-    animation: rise 420ms var(--ease-out-expo) both;
+    animation: rise 420ms var(--ease-out-expo) backwards;
     --rise: 8px;
   }
 }
@@ -1630,7 +1633,7 @@ body:has(.rv-page[data-theme="light"]) {
 }
 @media (prefers-reduced-motion: no-preference) {
   .entry-figure > span {
-    animation: rise 900ms var(--ease-out-expo) both;
+    animation: rise 900ms var(--ease-out-expo) backwards;
     --rise: 40px;
   }
   .entry-figure > span + span {
@@ -1641,10 +1644,10 @@ body:has(.rv-page[data-theme="light"]) {
     animation-delay: calc(500ms + var(--i, 0) * 60ms);
   }
   .entry-caption {
-    animation: rise 700ms var(--ease-out-expo) 320ms both;
+    animation: rise 700ms var(--ease-out-expo) 320ms backwards;
   }
   .entry-top > * {
-    animation: fade 600ms ease both;
+    animation: fade 600ms ease backwards;
   }
 }
 
@@ -1968,7 +1971,7 @@ body:has(.rv-page[data-theme="light"]) {
 }
 @media (prefers-reduced-motion: no-preference) {
   .slip-plans.is-open .slip-plan {
-    animation: rise 420ms var(--ease-out-expo) both;
+    animation: rise 420ms var(--ease-out-expo) backwards;
     --rise: 8px;
   }
   .slip-plans.is-open .slip-plan:nth-child(2) {
@@ -2099,11 +2102,11 @@ body:has(.rv-page[data-theme="light"]) {
 }
 @media (prefers-reduced-motion: no-preference) {
   .signup-thanks {
-    animation: rise 700ms var(--ease-out-expo) both;
+    animation: rise 700ms var(--ease-out-expo) backwards;
     --rise: 20px;
   }
   .signup-name {
-    animation: rise 900ms var(--ease-out-expo) 80ms both;
+    animation: rise 900ms var(--ease-out-expo) 80ms backwards;
     --rise: 40px;
   }
 }
@@ -2318,11 +2321,11 @@ body:has(.rv-page[data-theme="light"]) {
 }
 @media (prefers-reduced-motion: no-preference) {
   .entry-slip {
-    animation: rise 900ms var(--ease-out-expo) 120ms both;
+    animation: rise 900ms var(--ease-out-expo) 120ms backwards;
     --rise: 36px;
   }
   .slip-form > * {
-    animation: rise 600ms var(--ease-out-expo) both;
+    animation: rise 600ms var(--ease-out-expo) backwards;
     --rise: 12px;
   }
   .slip-form > :nth-child(2) {
@@ -2345,7 +2348,7 @@ body:has(.rv-page[data-theme="light"]) {
 /* children arrive one after another */
 @media (prefers-reduced-motion: no-preference) {
   .stagger > * {
-    animation: rise 560ms var(--ease-out-expo) both;
+    animation: rise 560ms var(--ease-out-expo) backwards;
   }
   .stagger > :nth-child(2) {
     animation-delay: 60ms;
@@ -2508,7 +2511,8 @@ html[data-rv-intro="title"] .rv-film-line + .rv-film-line > span {
 }
 .rv-film-title[dir="rtl"] .rv-film-thanks,
 .rv-film-title[dir="rtl"] .rv-film-name {
-  font-family: var(--font-nastaliq), var(--font-geist), sans-serif;
+  /* Geist first, as on the page: the business name stays Geist, only the Urdu letters are Nastaliq */
+  font-family: var(--font-geist), var(--font-nastaliq, "Noto Nastaliq Urdu"), "Noto Nastaliq Urdu", sans-serif;
   line-height: 1.6;
   letter-spacing: 0;
 }

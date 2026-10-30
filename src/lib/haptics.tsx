@@ -21,8 +21,19 @@ const PATTERNS: Record<Haptic, number[]> = {
   error: [40, 60, 40, 60, 40], // something needs fixing: three knocks
   deny: [60, 40, 60], // no more room (a fourth pick): two heavy thuds
 };
-// Stars from light to strong, so a finger sliding across them feels the rating climb.
+// Stars from light to strong: the tick when one is chosen.
 const STARS = [12, 18, 26, 34, 44];
+// A finger held on the stars hums, stronger the higher the star under it. A page can't set the
+// motor's strength, only when it runs, so strength is the share of each 40ms it is on: short
+// pulses for one star, unbroken for five.
+const HUM: [number, number][] = [
+  [8, 32],
+  [14, 26],
+  [21, 19],
+  [29, 11],
+  [40, 0],
+];
+let humming: ReturnType<typeof setInterval> | undefined;
 
 /** Vibrates where the phone can (Android); does nothing anywhere else. A newer one replaces it. */
 export function haptic(kind: Haptic) {
@@ -32,6 +43,23 @@ export function haptic(kind: Haptic) {
 /** The star under the finger, 1 to 5, light to strong. */
 export function starHaptic(n: number) {
   vibrate([STARS[Math.min(5, Math.max(1, n)) - 1]]);
+}
+
+/** Starts (or changes) the hum for the star under a held finger; `stopHum` ends it. */
+export function humStar(n: number) {
+  const [on, off] = HUM[Math.min(5, Math.max(1, n)) - 1];
+  // Chrome takes at most 99 steps per pattern, so about two seconds is queued and renewed before it runs out
+  const play = () => vibrate(off ? Array.from({ length: 98 }, (_, i) => (i % 2 ? off : on)) : [4000]);
+  clearInterval(humming);
+  play();
+  humming = setInterval(play, off ? 1900 : 3800);
+}
+
+export function stopHum() {
+  if (humming === undefined) return;
+  clearInterval(humming);
+  humming = undefined;
+  vibrate([0]);
 }
 
 /**
