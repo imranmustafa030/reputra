@@ -1,8 +1,9 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState } from "react";
-import { AlertCircle, ArrowLeft, Check, ChevronDown, PenLine, RotateCw, Star } from "lucide-react";
+import { AlertCircle, ArrowLeft, Check, ChevronDown, Copy as CopyIcon, PenLine, RotateCw, Star } from "lucide-react";
 import { sendFeedback } from "@/app/actions/feedback";
+import { copyText } from "@/lib/clipboard";
 import { haptic, HapticTap } from "@/lib/haptics";
 import { SubmitButton } from "@/components/form";
 import type { Copy } from "./copy";
@@ -42,10 +43,10 @@ export function StepBar({ t, step, of, rating, rtl, onBack }: { t: Copy; step: n
 }
 
 // `spare`: a hint the screen can do without on short phones, so nothing has to scroll.
-function StepTitle({ title, hint, rtl, spare }: { title: string; hint?: string; rtl: boolean; spare?: boolean }) {
+function StepTitle({ title, hint, spare }: { title: string; hint?: string; spare?: boolean }) {
   return (
     <div className="rv-gap">
-      <h2 className={`rv-step-title ${rtl ? "leading-[1.7]" : ""}`}>{title}</h2>
+      <h2 className="rv-step-title">{title}</h2>
       {hint && <p className={`rv-step-hint ${spare ? "rv-spare" : ""}`}>{hint}</p>}
     </div>
   );
@@ -55,7 +56,6 @@ function StepTitle({ title, hint, rtl, spare }: { title: string; hint?: string; 
 
 export function PicksStep({
   t,
-  rtl,
   low,
   chips,
   issues,
@@ -68,7 +68,6 @@ export function PicksStep({
   bar,
 }: {
   t: Copy;
-  rtl: boolean;
   low: boolean; // 1 to 3 stars: "could be better" words as well
   chips: string[] | null; // null while the AI makes them
   issues: string[] | null;
@@ -85,7 +84,7 @@ export function PicksStep({
   return (
     <div className="flex flex-1 flex-col">
       {bar}
-      <StepTitle title={t.write.title} hint={t.write.hint} rtl={rtl} />
+      <StepTitle title={t.write.title} hint={t.write.hint} />
       {good ? <ChipGroup label={t.write.title} list={good} kind="g" picks={picks} onToggle={onToggle} /> : <ChipsLoading count={low ? 4 : 6} top />}
       {low && (
         <>
@@ -175,7 +174,6 @@ export type Drafts = { texts: [string, string, string]; ai: boolean; rating: num
 
 export function DraftsStep({
   t,
-  rtl,
   rating,
   drafts,
   busy,
@@ -192,7 +190,6 @@ export function DraftsStep({
   bar,
 }: {
   t: Copy;
-  rtl: boolean;
   rating: number;
   drafts: Drafts | null;
   busy: boolean;
@@ -209,10 +206,23 @@ export function DraftsStep({
   bar: React.ReactNode;
 }) {
   const ready = Boolean(drafts) && !busy && !failed;
+  // Press and hold a draft and its own "Copy" appears over it (the page itself can't be selected).
+  const [copyMenu, setCopyMenu] = useState<{ i: number; done: boolean } | null>(null);
+  const press = useRef<{ x: number; y: number; held: boolean; timer: ReturnType<typeof setTimeout> } | null>(null);
+  useEffect(() => {
+    if (!copyMenu) return;
+    const close = (e: PointerEvent) => !(e.target as Element).closest(".rv-copy-pill") && setCopyMenu(null);
+    addEventListener("pointerdown", close, true);
+    const done = copyMenu.done ? setTimeout(() => setCopyMenu(null), 1600) : undefined;
+    return () => {
+      removeEventListener("pointerdown", close, true);
+      clearTimeout(done);
+    };
+  }, [copyMenu]);
   return (
     <div className="flex flex-1 flex-col">
       {bar}
-      <StepTitle title={t.write.title2} hint={t.write.hint2} spare rtl={rtl} />
+      <StepTitle title={t.write.title2} hint={t.write.hint2} spare />
 
       {busy && <Writing label={t.write.writing} />}
 
@@ -236,7 +246,29 @@ export function DraftsStep({
               // Same element whether chosen or not, so switching only lifts it; new drafts replay the entrance.
               <div
                 key={`${drafts.round}-${i}`}
-                onClick={picked ? undefined : () => onChoose(i)}
+                onPointerDown={(e) => {
+                  if ((e.target as Element).closest("textarea, .rv-copy-pill")) return; // the text being edited keeps its own selection
+                  clearTimeout(press.current?.timer);
+                  const timer = setTimeout(() => {
+                    if (press.current) press.current.held = true;
+                    setCopyMenu({ i, done: false });
+                    haptic("select");
+                  }, 450);
+                  press.current = { x: e.clientX, y: e.clientY, held: false, timer };
+                }}
+                onPointerMove={(e) => {
+                  const p = press.current;
+                  if (p && !p.held && Math.hypot(e.clientX - p.x, e.clientY - p.y) > 10) clearTimeout(p.timer);
+                }}
+                onPointerUp={() => press.current && !press.current.held && clearTimeout(press.current.timer)}
+                onPointerCancel={() => clearTimeout(press.current?.timer)}
+                onClick={() => {
+                  if (press.current?.held) {
+                    press.current = null; // the hold opened Copy; its lift is not a choice
+                    return;
+                  }
+                  if (!picked) onChoose(i);
+                }}
                 className={`rv-glass rv-draft ${picked ? "is-picked" : ""}`}
                 style={{ "--i": i } as React.CSSProperties}
               >
@@ -257,6 +289,27 @@ export function DraftsStep({
                   <p className="rv-draft-text rv-clamp">{text}</p>
                 )}
                 <HapticTap off={picked} />
+                {copyMenu?.i === i && (
+                  <button
+                    type="button"
+                    className="rv-copy-pill"
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      // it opens under the finger: the lift of the hold that opened it is not a tap on it
+                      if (press.current?.held) {
+                        press.current = null;
+                        return;
+                      }
+                      const ok = await copyText(text);
+                      haptic(ok ? "success" : "error");
+                      setCopyMenu({ i, done: ok });
+                    }}
+                  >
+                    {copyMenu.done ? <Check aria-hidden="true" className="size-4" strokeWidth={2.5} /> : <CopyIcon aria-hidden="true" className="size-4" strokeWidth={2} />}
+                    {copyMenu.done ? t.write.copiedOne : t.write.copyOne}
+                    <HapticTap />
+                  </button>
+                )}
               </div>
             );
           })}
@@ -290,7 +343,7 @@ export function DraftsStep({
               <HapticTap />
             </button>
           )}
-          <p className="mt-2 text-center text-xs leading-snug text-(--rv-fg2)">{t.write.paste(rating)}</p>
+          <p className="rv-paste mt-2 text-center text-xs leading-snug text-(--rv-fg2)">{t.write.paste(rating)}</p>
         </div>
       )}
     </div>
@@ -334,7 +387,7 @@ function AutoText({ value, onChange, label }: { value: string; onChange: (v: str
       value={value}
       onChange={(e) => onChange(e.target.value)}
       maxLength={1000}
-      rows={2}
+      rows={1} // the floor is min-height in the CSS: two Latin lines, one Urdu line
       className="rv-draft-text rv-draft-edit"
     />
   );
@@ -405,7 +458,7 @@ export function NoteStep({
   return (
     <form action={action} onSubmit={check} noValidate className="flex flex-1 flex-col">
       {bar}
-      <StepTitle title={title} hint={noGoogle ? t.noGoogle : t.form.only} spare={!noGoogle} rtl={rtl} />
+      <StepTitle title={title} hint={noGoogle ? t.noGoogle : t.form.only} spare={!noGoogle} />
       <input type="hidden" name="slug" value={slug} />
       <input type="hidden" name="source" value={source} />
       <input type="text" name="website" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden="true" />
@@ -476,7 +529,7 @@ export function NoteStep({
 
 /* ------------------------------------------------------------------ thank you */
 
-export function ThanksStep({ t, rtl, kind, name, onAgain }: { t: Copy; rtl: boolean; kind: "google" | "note"; name: string; onAgain: () => void }) {
+export function ThanksStep({ t, kind, name, onAgain }: { t: Copy; kind: "google" | "note"; name: string; onAgain: () => void }) {
   return (
     <div className="flex flex-1 flex-col items-center justify-center pb-14 text-center" role="status">
       <span className="rv-done" aria-hidden="true">
@@ -489,8 +542,7 @@ export function ThanksStep({ t, rtl, kind, name, onAgain }: { t: Copy; rtl: bool
           </svg>
         </span>
       </span>
-      {/* Urdu: the room above is padding, not margin, so the box holds the tall strokes of ک and گ (Safari clips at the box) */}
-      <h2 className={`rv-done-title ${rtl ? "mt-6 pt-3 leading-[1.6]" : "mt-9"}`}>{t.done.title}</h2>
+      <h2 className="rv-done-title mt-9">{t.done.title}</h2>
       <p className="rv-done-text mt-3 max-w-[26ch] text-[1.05rem] leading-relaxed text-(--rv-fg2)">{kind === "google" ? t.done.google(name) : t.done.note}</p>
       <p className="rv-done-sign mt-6 flex items-center gap-2 text-sm text-(--rv-fg3)">
         <span aria-hidden="true" className="h-px w-6 bg-(--rv-line)" />

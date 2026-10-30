@@ -229,9 +229,7 @@ Only Reputra team accounts can open it. The first admin is created by the seed (
 The website still has sample content. The full checklist with IDs D01–D41 is in `website/TO-CHANGE.md` (its "where" column is out of date: everything now lives in `reputra/public/index.html`, except the WhatsApp number).
 
 Most important first:
-- **D01 WhatsApp number:** today `923000000000`, on the website (`public/site.js`) and in the app (`src/lib/contact.ts`).
 - **Payment accounts:** placeholders until you edit them in Admin → Settings.
-- **Founder name:** "[Your name]" in the promise section.
 - **Prices**, if they change: Admin → Settings for the app, `public/index.html` for the website.
 
 ---

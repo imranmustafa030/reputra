@@ -52,13 +52,43 @@
   --ease-in-out-quart: cubic-bezier(0.76, 0, 0.24, 1);
 }
 
-/* Urdu in Nastaliq. A plain rule, not a theme font: --font-nastaliq is set on the review page's
-   <main> (next/font), and a theme variable at :root that points at it resolves to nothing there,
-   which dropped every Urdu screen to the phone's own Arabic font (on iPhone a taller Nastaliq the
-   spacing wasn't made for, so lines got cut). */
-.font-urdu {
-  /* Geist first: it has no Urdu letters, so those fall to Nastaliq while names and numbers stay Geist */
-  font-family: var(--font-geist), var(--font-nastaliq, "Noto Nastaliq Urdu"), "Noto Nastaliq Urdu", serif;
+/* Urdu in Nastaliq, served from this site (only downloaded once a customer is reading Urdu).
+   Its strokes reach far past an ordinary line (measured over every word the page uses: 1.94em
+   above the baseline, 0.60em below, at regular weight; bold reaches 2.10em). Ink outside the
+   line, Safari treats as outside the text and wipes whenever something near it repaints (the
+   halo over "شکریہ", the entrances above a heading), so Urdu showed with its tops cut until a
+   language switch redrew it. So:
+   - this face covers the Arabic letters and the space, which makes it the first available font
+     for Urdu text: the line box is measured from Nastaliq (1.9em up, 0.6em down) instead of
+     Geist, while Latin letters (names, numbers) still fall through to Geist and keep their bold;
+   - Nastaliq is only ever regular (the face is declared at 400 and nothing fakes a bold), as
+     Urdu is set anyway;
+   - every Urdu line is 2.7 tall, which holds all of it (1.9 + 0.1 above, 0.6 + 0.1 below; at
+     small sizes the rendered strokes round up to about 1.99em).
+   The space comes from the font's Latin file, the one glyph used from it. */
+@font-face {
+  font-family: "Reputra Nastaliq";
+  src: url("/fonts/nastaliq-arabic.v1.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+  unicode-range: U+0600-06FF, U+0750-077F, U+0870-08FF, U+200C-200E, U+2010-2011, U+FB50-FDFF, U+FE70-FEFF;
+}
+@font-face {
+  font-family: "Reputra Nastaliq";
+  src: url("/fonts/nastaliq-latin.v1.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+  unicode-range: U+0020, U+00A0;
+}
+.font-urdu,
+.rv-film-title[dir="rtl"] {
+  font-family: "Reputra Nastaliq", var(--font-geist), "Noto Nastaliq Urdu", serif;
+  font-synthesis-weight: none;
+}
+.font-urdu,
+.font-urdu *,
+.rv-film-title[dir="rtl"] * {
+  line-height: 2.7 !important; /* a property of the script, so it overrides every component's own */
 }
 
 @layer base {
@@ -683,8 +713,14 @@
 .rv-name {
   color: var(--rv-fg);
 }
+/* A business name in Latin letters on an Urdu screen: its own line, measured in Geist, so it isn't
+   given Nastaliq's tall line it doesn't need (a name in Urdu letters keeps the Urdu line). */
+.font-urdu .rv-latin {
+  display: block;
+  font-family: var(--font-geist), sans-serif;
+  line-height: 1.08 !important;
+}
 [dir="rtl"] .rv-head {
-  line-height: 1.7;
   letter-spacing: 0;
 }
 .rv-question {
@@ -1030,6 +1066,47 @@ body:has(.rv-page[data-theme="light"]) {
     background-color: var(--rv-glass-solid);
   }
 }
+/* Nothing on the review page can be selected or copied: no selection, no long-press menu. What the
+   customer types can (fields), and the drafts have their own Copy on a long press (.rv-copy-pill). */
+.rv-page {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+.rv-page :is(input, textarea) {
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
+}
+/* a held draft's own Copy, over its middle */
+.rv-copy-pill {
+  position: absolute;
+  z-index: 2;
+  inset-block-start: 50%;
+  inset-inline-start: 50%;
+  translate: -50% -50%;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 44px;
+  padding: 0 18px;
+  border-radius: 999px;
+  background: var(--rv-fg);
+  color: var(--rv-bg);
+  font-size: 15px;
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: var(--rv-lift-shadow);
+  -webkit-tap-highlight-color: transparent;
+}
+[dir="rtl"] .rv-copy-pill {
+  translate: 50% -50%;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .rv-copy-pill {
+    animation: pop 320ms var(--ease-out-expo) backwards;
+  }
+}
 /* what stood out: tap to pick */
 .rv-chip {
   display: inline-flex;
@@ -1179,22 +1256,16 @@ body:has(.rv-page[data-theme="light"]) {
   line-height: 1.55;
   color: var(--rv-fg);
 }
+/* Urdu's taller lines: a smaller draft size, and one line per unchosen draft, keep the three on one screen */
 [dir="rtl"] .rv-draft-text {
-  font-size: 17px;
-  line-height: 2;
+  font-size: 15.5px;
 }
-/* Nastaliq reaches far above and below its line. Wherever Urdu sits inside something that clips
-   (fields, the edited draft, the two-line preview) it gets room, or Safari cuts its tops and tails. */
-[dir="rtl"] .rv-field {
-  line-height: 2.1;
-  padding-block: 6px;
-}
-[dir="rtl"] textarea.rv-field {
-  padding-block: 10px;
-}
-[dir="rtl"] .rv-draft-edit,
 [dir="rtl"] .rv-clamp {
-  padding-block: 0.25em;
+  -webkit-line-clamp: 1;
+}
+/* the taller Urdu line, with less padding, keeps a one-line field its height */
+[dir="rtl"] input.rv-field {
+  padding-block: 4px;
 }
 .rv-draft-edit {
   display: block;
@@ -1206,6 +1277,9 @@ body:has(.rv-page[data-theme="light"]) {
   border-radius: 8px;
   background: transparent;
   padding: 0;
+}
+[dir="rtl"] .rv-draft-edit {
+  min-height: 2.7em;
 }
 .rv-draft-edit:focus {
   outline: none;
@@ -1337,6 +1411,26 @@ body:has(.rv-page[data-theme="light"]) {
   }
   .rv-step .rv-note-box {
     height: 92px;
+  }
+}
+/* Urdu's taller lines on those phones: the edit hint steps aside as well, the title is a size down,
+   and the chosen draft shows two lines and scrolls inside itself past that */
+@media (max-height: 780px) {
+  [dir="rtl"] .rv-step .rv-edit-hint {
+    display: none;
+  }
+  [dir="rtl"] .rv-step .rv-step-title {
+    font-size: 1.25rem;
+  }
+  [dir="rtl"] .rv-step .rv-draft-edit {
+    max-height: calc(2 * 2.7em);
+    overflow-y: auto;
+  }
+  [dir="rtl"] .rv-step .rv-paste {
+    display: none; /* the gold button already says it: copy, then open Google */
+  }
+  [dir="rtl"] .rv-step .rv-draft-head {
+    font-size: 12px;
   }
 }
 .rv-note-box {
@@ -2506,15 +2600,9 @@ html[data-rv-intro="title"] .rv-film-line + .rv-film-line > span {
   letter-spacing: -0.045em;
   overflow-wrap: anywhere;
 }
-.rv-film-title[dir="rtl"] .rv-film-line {
-  padding-block: 0.3em 0.45em; /* the masks would cut Nastaliq's tall letters and long tails */
-}
 .rv-film-title[dir="rtl"] .rv-film-thanks,
 .rv-film-title[dir="rtl"] .rv-film-name {
-  /* Geist first, as on the page: the business name stays Geist, only the Urdu letters are Nastaliq */
-  font-family: var(--font-geist), var(--font-nastaliq, "Noto Nastaliq Urdu"), "Noto Nastaliq Urdu", sans-serif;
-  line-height: 1.6;
-  letter-spacing: 0;
+  letter-spacing: 0; /* the font is .font-urdu's: Nastaliq measures the line, a Latin name stays Geist */
 }
 /* the lift: the whole film panel rises off the page */
 html[data-rv-intro="lift"] .rv-film {

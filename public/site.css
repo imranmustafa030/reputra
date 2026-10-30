@@ -722,10 +722,8 @@ main > section:not(.stage):not(.intro) > * { max-width: var(--max); margin-inlin
 }
 .founder footer { display: flex; align-items: center; gap: 16px; font-family: var(--sans); font-size: 0.92rem; color: var(--stone-500); line-height: 1.4; }
 .founder footer b { color: var(--ink-950); font-weight: 600; }
-.monogram {
-  display: grid; place-items: center; width: 52px; height: 52px; border-radius: 50%;
-  border: 1px solid var(--ink-950); font-family: var(--display); font-size: 1.2rem; font-weight: 600; letter-spacing: -0.04em;
-}
+/* the founder, on the brand's amber (alt is empty: his name is right beside it) */
+.founder__photo { flex: none; width: 56px; height: 56px; border-radius: 50%; object-fit: cover; background: var(--amber); box-shadow: 0 0 0 1px var(--rule); }
 .promise__offer { font-family: var(--sans); font-size: 0.95rem; color: var(--ink-800); padding-top: 24px; border-top: 1px solid var(--rule); }
 
 /* ---------- 5 · month ---------- */

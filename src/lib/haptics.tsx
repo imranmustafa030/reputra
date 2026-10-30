@@ -24,19 +24,22 @@ const PATTERNS: Record<Haptic, number[]> = {
 // Stars from light to strong: the tick when one is chosen.
 const STARS = [12, 18, 26, 34, 44];
 // A finger held on the stars hums, stronger the higher the star under it. A page can't set the
-// motor's strength, only when it runs, so strength is the share of each 40ms it is on: short
-// pulses for one star, unbroken for five.
+// motor's strength, only when it runs, so each star is a rhythm: slow light taps for one star,
+// quicker and longer for each star up, unbroken for five. The steps are coarse on purpose: a
+// phone motor needs 20-30ms just to spin up, so finer slices (tried: 8 of every 40ms) felt like
+// nothing at the bottom and one buzz at the top.
 const HUM: [number, number][] = [
-  [8, 32],
-  [14, 26],
-  [21, 19],
-  [29, 11],
-  [40, 0],
+  [20, 150], // on, off (ms)
+  [28, 95],
+  [38, 55],
+  [55, 25],
+  [1000, 0],
 ];
 let humming: ReturnType<typeof setInterval> | undefined;
 
 /** Vibrates where the phone can (Android); does nothing anywhere else. A newer one replaces it. */
 export function haptic(kind: Haptic) {
+  if (typeof navigator !== "undefined" && typeof navigator.vibrate !== "function") debug?.(`${kind}: this browser has no vibration`);
   vibrate(PATTERNS[kind]);
 }
 
@@ -48,18 +51,32 @@ export function starHaptic(n: number) {
 /** Starts (or changes) the hum for the star under a held finger; `stopHum` ends it. */
 export function humStar(n: number) {
   const [on, off] = HUM[Math.min(5, Math.max(1, n)) - 1];
-  // Chrome takes at most 99 steps per pattern, so about two seconds is queued and renewed before it runs out
-  const play = () => vibrate(off ? Array.from({ length: 98 }, (_, i) => (i % 2 ? off : on)) : [4000]);
+  // about three seconds is queued (Chrome takes at most 99 steps) and renewed before it runs out
+  const pattern = off ? Array.from({ length: Math.min(98, 2 * Math.ceil(3000 / (on + off))) }, (_, i) => (i % 2 ? off : on)) : [3000];
   clearInterval(humming);
-  play();
-  humming = setInterval(play, off ? 1900 : 3800);
+  vibrate(pattern);
+  humming = setInterval(() => vibrate(pattern), 2800);
 }
 
 export function stopHum() {
   if (humming === undefined) return;
   clearInterval(humming);
   humming = undefined;
-  vibrate([0]);
+  // straight to the browser: a stop is not a haptic, so it must not hold back the tap that follows
+  try {
+    navigator.vibrate?.(0);
+  } catch {}
+  debug?.("stop");
+}
+
+// `?debug=haptics` on a review link: what the stars receive and what the browser answers to each
+// vibration, printed on the page, for checking on a real phone.
+let debug: ((line: string) => void) | null = null;
+export function hapticDebug(fn: ((line: string) => void) | null) {
+  debug = fn;
+}
+export function hlog(line: string) {
+  debug?.(line);
 }
 
 /**
@@ -76,11 +93,17 @@ export function tapHaptic(e: React.MouseEvent) {
 let last = -Infinity;
 function vibrate(pattern: number[]) {
   if (typeof navigator === "undefined" || typeof navigator.vibrate !== "function") return;
+  const ua = navigator.userActivation;
+  const what = pattern.length > 3 ? `hum ${pattern[0]}/${pattern[1]}` : JSON.stringify(pattern);
   // Chrome refuses (and warns in the console) before the first touch.
-  if (navigator.userActivation && !navigator.userActivation.hasBeenActive) return;
+  if (ua && !ua.hasBeenActive) {
+    debug?.(`${what}: not sent, no tap on the page yet`);
+    return;
+  }
   try {
-    navigator.vibrate(pattern);
+    const ok = navigator.vibrate(pattern);
     last = performance.now();
+    debug?.(`${what} → ${ok ? "accepted" : "REFUSED"} · tapped ${ua?.hasBeenActive} · active ${ua?.isActive}`);
   } catch {}
 }
 

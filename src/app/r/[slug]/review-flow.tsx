@@ -5,7 +5,7 @@ import { flushSync } from "react-dom";
 import { ArrowRight, Moon, Sun } from "lucide-react";
 import { COPY, LANG_NAMES, LANGS, type Lang } from "./copy";
 import { copyText } from "@/lib/clipboard";
-import { haptic, HapticTap, humStar, starHaptic, stopHum, tapHaptic } from "@/lib/haptics";
+import { haptic, hapticDebug, HapticTap, hlog, humStar, starHaptic, stopHum, tapHaptic } from "@/lib/haptics";
 import { DraftsStep, MAX_PICKS, NoteStep, PicksStep, StepBar, ThanksStep, type Drafts } from "./steps";
 
 type Props = {
@@ -114,6 +114,7 @@ export function ReviewFlow({ business, source, preview = false }: Props) {
   const drag = useRef<{ id: number; star: number; moved: boolean; inside: boolean } | null>(null);
   const slid = useRef(false);
   const starsRow = useRef<HTMLDivElement>(null);
+  const [debugLines, setDebugLines] = useState<string[] | null>(null);
   const request = useRef<AbortController | null>(null);
   const t = COPY[lang];
   const rtl = lang === "ur";
@@ -187,6 +188,22 @@ export function ReviewFlow({ business, source, preview = false }: Props) {
     }
   }, []);
 
+  // ?debug=haptics: the haptics log on screen (see lib/haptics)
+  useEffect(() => {
+    if (new URLSearchParams(location.search).get("debug") !== "haptics") return;
+    const t0 = performance.now();
+    hapticDebug((line) => setDebugLines((l) => [...(l ?? []), `${((performance.now() - t0) / 1000).toFixed(1)}s ${line}`].slice(-14)));
+    hlog(`vibration: ${typeof navigator.vibrate === "function" ? "yes" : "no"} · ${navigator.userAgent.replace(/^.*?\(/, "(").slice(0, 60)}`);
+    return () => hapticDebug(null);
+  }, []);
+
+  // A hum must never outlive the page being seen.
+  useEffect(() => {
+    const quiet = () => document.visibilityState === "hidden" && stopHum();
+    document.addEventListener("visibilitychange", quiet);
+    return () => document.removeEventListener("visibilitychange", quiet);
+  }, []);
+
   useEffect(() => {
     history.replaceState({ ...history.state, rv: restored ? "thanks" : "rate" }, "");
     const onPop = (e: PopStateEvent) => show((e.state?.rv as Screen) ?? "rate", { back: true });
@@ -256,11 +273,24 @@ export function ReviewFlow({ business, source, preview = false }: Props) {
   }
 
   function onStarDown(e: React.PointerEvent) {
-    if (e.pointerType === "mouse" || drag.current) return;
+    hlog(`down ${e.pointerType} on star ${starAt(e.clientX)}`);
+    if (e.pointerType === "mouse") return;
+    // a new touch always starts fresh, whatever an earlier one left behind
+    const id = e.pointerId;
     const n = starAt(e.clientX);
-    drag.current = { id: e.pointerId, star: n, moved: false, inside: true };
+    drag.current = { id, star: n, moved: false, inside: true };
     setHover(n);
     humStar(n);
+    // and its end is always heard: should the lift land somewhere the row's own handler never
+    // sees, this ends the hum a moment later
+    const end = (ev: PointerEvent) => {
+      if (ev.pointerId !== id) return;
+      removeEventListener("pointerup", end, true);
+      removeEventListener("pointercancel", end, true);
+      setTimeout(() => drag.current?.id === id && onStarCancel());
+    };
+    addEventListener("pointerup", end, true);
+    addEventListener("pointercancel", end, true);
   }
 
   function onStarMove(e: React.PointerEvent) {
@@ -276,6 +306,7 @@ export function ReviewFlow({ business, source, preview = false }: Props) {
     }
     const n = starAt(e.clientX);
     if (d.inside && n === d.star) return;
+    hlog(`slide to star ${n}`);
     if (n !== d.star) d.moved = true;
     d.inside = true;
     d.star = n;
@@ -286,6 +317,7 @@ export function ReviewFlow({ business, source, preview = false }: Props) {
   function onStarUp(e: React.PointerEvent) {
     const d = drag.current;
     if (!d || d.id !== e.pointerId) return;
+    hlog(`up on star ${d.star}${d.inside ? "" : " (away)"}`);
     drag.current = null;
     stopHum();
     setHover(0);
@@ -296,6 +328,7 @@ export function ReviewFlow({ business, source, preview = false }: Props) {
   }
 
   function onStarCancel() {
+    if (drag.current) hlog("touch cancelled");
     drag.current = null;
     stopHum();
     setHover(0);
@@ -424,6 +457,12 @@ export function ReviewFlow({ business, source, preview = false }: Props) {
       dir={rtl ? "rtl" : "ltr"}
       lang={lang === "ur" ? "ur" : lang === "roman" ? "ur-Latn" : "en"}
       onClick={tapHaptic}
+      // Nothing on the page can be selected or copied (the CSS stops selection and the long-press
+      // menu); what the customer typed and the drafts (their own "Copy") are the exceptions.
+      onCopy={(e) => !(e.target as Element).closest?.("input, textarea") && e.preventDefault()}
+      onCut={(e) => !(e.target as Element).closest?.("input, textarea") && e.preventDefault()}
+      onContextMenu={(e) => !(e.target as Element).closest("input, textarea") && e.preventDefault()}
+      onDragStart={(e) => e.preventDefault()}
       style={{ "--rv-glow": screen === "thanks" ? 1 : rating / 5 } as React.CSSProperties}
     >
       {/* The warm light the glass floats over; it brightens with the stars. */}
@@ -466,11 +505,11 @@ export function ReviewFlow({ business, source, preview = false }: Props) {
               {/* Who the customer is thanking, large: on wide screens it holds the left half. */}
               <h1 className="rv-head rv-in" style={{ "--d": "60ms", "--len": Math.max(business.name.length + t.thanks.length, 30) } as React.CSSProperties}>
                 <span className="rv-thanks">{t.thanks} </span>
-                <span className="rv-name">{business.name}</span>
+                <span className={`rv-name ${/[\u0600-\u06FF]/.test(business.name) ? "" : "rv-latin"}`}>{business.name}</span>
               </h1>
 
               <section className="rv-panel" aria-labelledby="rv-question">
-                <h2 id="rv-question" className={`rv-question rv-in ${rtl ? "leading-loose" : ""}`} style={{ "--d": "160ms" } as React.CSSProperties}>
+                <h2 id="rv-question" className="rv-question rv-in" style={{ "--d": "160ms" } as React.CSSProperties}>
                   {t.question}
                 </h2>
 
@@ -554,7 +593,6 @@ export function ReviewFlow({ business, source, preview = false }: Props) {
         {screen === "picks" && (
           <PicksStep
             t={t}
-            rtl={rtl}
             low={!happy}
             chips={wordsFor === words?.key ? words.good : null}
             issues={wordsFor === words?.key ? words.bad : null}
@@ -574,7 +612,6 @@ export function ReviewFlow({ business, source, preview = false }: Props) {
         {screen === "drafts" && (
           <DraftsStep
             t={t}
-            rtl={rtl}
             rating={rating}
             drafts={drafts}
             busy={busy}
@@ -614,10 +651,15 @@ export function ReviewFlow({ business, source, preview = false }: Props) {
           />
         )}
 
+        {debugLines && (
+          <pre dir="ltr" className="pointer-events-none fixed inset-x-2 top-2 z-[100] max-h-[45vh] overflow-hidden rounded-lg bg-black/85 p-2 font-mono text-[10.5px] leading-snug whitespace-pre-wrap text-white">
+            {debugLines.join("\n")}
+          </pre>
+        )}
+
         {screen === "thanks" && (
           <ThanksStep
             t={t}
-            rtl={rtl}
             kind={thanks}
             name={business.name}
             onAgain={() => {
