@@ -5,7 +5,7 @@ import { flushSync } from "react-dom";
 import { ArrowRight, Moon, Sun } from "lucide-react";
 import { COPY, LANG_NAMES, LANGS, type Lang } from "./copy";
 import { copyText } from "@/lib/clipboard";
-import { haptic, hapticDebug, HapticTap, hlog, humStar, starHaptic, stopHum, tapHaptic } from "@/lib/haptics";
+import { haptic, hapticDebug, HapticTap, hlog, starHaptic, tapHaptic } from "@/lib/haptics";
 import { DraftsStep, MAX_PICKS, NoteStep, PicksStep, StepBar, ThanksStep, type Drafts } from "./steps";
 
 type Props = {
@@ -107,11 +107,15 @@ export function ReviewFlow({ business, source, preview = false }: Props) {
   const opening = useRef(false); // Google is on its way: a second tap must not open (and count) it twice
   const latest = useRef(0);
   const advance = useRef<ReturnType<typeof setTimeout>>(undefined);
-  // A finger on the stars hums while it is held, stronger the higher the star under it, and can
-  // slide across them; the rating is the star it lifts off. Drawn away from the stars it goes
-  // quiet (lifting there chooses nothing) and hums again when it comes back. `slid` swallows the
+  // A finger on the stars can slide across them: each star that lights up or goes dark is felt as
+  // its own tick (stronger the higher the star), and the rating is the star it lifts off. Drawn
+  // away from the stars they clear (lifting there chooses nothing) and come back with it. `felt`
+  // is the star a touch last ticked for, so choosing it doesn't tick twice; `slid` swallows the
   // click some phones still send after a slide.
   const drag = useRef<{ id: number; star: number; moved: boolean; inside: boolean } | null>(null);
+  const felt = useRef(0);
+  const ticks = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const tickAt = useRef(0); // when the last queued tick plays
   const slid = useRef(false);
   const starsRow = useRef<HTMLDivElement>(null);
   const [debugLines, setDebugLines] = useState<string[] | null>(null);
@@ -197,13 +201,6 @@ export function ReviewFlow({ business, source, preview = false }: Props) {
     return () => hapticDebug(null);
   }, []);
 
-  // A hum must never outlive the page being seen.
-  useEffect(() => {
-    const quiet = () => document.visibilityState === "hidden" && stopHum();
-    document.addEventListener("visibilitychange", quiet);
-    return () => document.removeEventListener("visibilitychange", quiet);
-  }, []);
-
   useEffect(() => {
     history.replaceState({ ...history.state, rv: restored ? "thanks" : "rate" }, "");
     const onPop = (e: PopStateEvent) => show((e.state?.rv as Screen) ?? "rate", { back: true });
@@ -220,7 +217,7 @@ export function ReviewFlow({ business, source, preview = false }: Props) {
       window.removeEventListener("pageshow", onShow);
       clearTimeout(advance.current);
       request.current?.abort();
-      stopHum();
+      ticks.current.forEach(clearTimeout);
     };
   }, [show, restored]);
 
@@ -229,7 +226,8 @@ export function ReviewFlow({ business, source, preview = false }: Props) {
     setRating(n);
     setBurst((b) => b + 1);
     if (n === 5) haptic("success");
-    else starHaptic(n);
+    else if (felt.current !== n) starHaptic(n);
+    felt.current = 0;
     clearTimeout(advance.current);
     if (!go) return;
     if (n >= 4 && business.hasGoogleLink) loadWords(n);
@@ -272,6 +270,22 @@ export function ReviewFlow({ business, source, preview = false }: Props) {
     return !!r && x > r.left - 24 && x < r.right + 24 && y > r.top - 56 && y < r.bottom + 56;
   }
 
+  // A tick for every star between, a beat apart: a quick slide can cross two stars between one
+  // touch update and the next, and each one should still be felt.
+  // Queued, never replaced, so none is lost when the next update comes before the last tick played.
+  // `now`: the touch event's timeStamp (the same clock as performance.now)
+  function feelStars(from: number, to: number, now: number) {
+    const step = to > from ? 1 : -1;
+    for (let star = from + step; ; star += step) {
+      const at = Math.max(now, tickAt.current + 55);
+      tickAt.current = at;
+      const n = star;
+      ticks.current.push(setTimeout(() => starHaptic(n), at - now));
+      if (star === to) break;
+    }
+    felt.current = to;
+  }
+
   function onStarDown(e: React.PointerEvent) {
     hlog(`down ${e.pointerType} on star ${starAt(e.clientX)}`);
     if (e.pointerType === "mouse") return;
@@ -280,9 +294,13 @@ export function ReviewFlow({ business, source, preview = false }: Props) {
     const n = starAt(e.clientX);
     drag.current = { id, star: n, moved: false, inside: true };
     setHover(n);
-    humStar(n);
+    ticks.current.forEach(clearTimeout);
+    ticks.current = [];
+    starHaptic(n);
+    tickAt.current = e.timeStamp;
+    felt.current = n;
     // and its end is always heard: should the lift land somewhere the row's own handler never
-    // sees, this ends the hum a moment later
+    // sees, this ends the touch a moment later
     const end = (ev: PointerEvent) => {
       if (ev.pointerId !== id) return;
       removeEventListener("pointerup", end, true);
@@ -301,17 +319,22 @@ export function ReviewFlow({ business, source, preview = false }: Props) {
       d.inside = false;
       d.moved = true;
       setHover(0);
-      stopHum();
+      ticks.current.forEach(clearTimeout);
+      felt.current = 0;
       return;
     }
     const n = starAt(e.clientX);
     if (d.inside && n === d.star) return;
     hlog(`slide to star ${n}`);
+    if (!d.inside) {
+      starHaptic(n); // back over the stars: one tick for where it landed
+      tickAt.current = e.timeStamp;
+      felt.current = n;
+    } else feelStars(d.star, n, e.timeStamp);
     if (n !== d.star) d.moved = true;
     d.inside = true;
     d.star = n;
     setHover(n);
-    humStar(n);
   }
 
   function onStarUp(e: React.PointerEvent) {
@@ -319,7 +342,6 @@ export function ReviewFlow({ business, source, preview = false }: Props) {
     if (!d || d.id !== e.pointerId) return;
     hlog(`up on star ${d.star}${d.inside ? "" : " (away)"}`);
     drag.current = null;
-    stopHum();
     setHover(0);
     if (!d.moved) return; // a plain tap: its click chooses
     slid.current = true;
@@ -330,7 +352,8 @@ export function ReviewFlow({ business, source, preview = false }: Props) {
   function onStarCancel() {
     if (drag.current) hlog("touch cancelled");
     drag.current = null;
-    stopHum();
+    ticks.current.forEach(clearTimeout);
+    felt.current = 0;
     setHover(0);
   }
 

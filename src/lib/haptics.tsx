@@ -9,7 +9,8 @@ import { useSyncExternalStore } from "react";
 // - iPhone: Safari has no vibration, but toggling a switch plays the system tick. Since iOS 26.5
 //   only a real finger on the switch does (a page clicking it from code stays silent), so the
 //   tap targets carry `<HapticTap />`: an invisible label over the element, tied to a hidden
-//   switch. One tick per tap, whatever `haptic()` was asked for, and nothing while a finger slides.
+//   switch. One tick per tap, whatever `haptic()` was asked for, and nothing while a finger slides
+//   (a slide is never a tap, so no page can make an iPhone tick during one).
 
 export type Haptic = "tap" | "select" | "success" | "error" | "deny";
 
@@ -21,21 +22,10 @@ const PATTERNS: Record<Haptic, number[]> = {
   error: [40, 60, 40, 60, 40], // something needs fixing: three knocks
   deny: [60, 40, 60], // no more room (a fourth pick): two heavy thuds
 };
-// Stars from light to strong: the tick when one is chosen.
-const STARS = [12, 18, 26, 34, 44];
-// A finger held on the stars hums, stronger the higher the star under it. A page can't set the
-// motor's strength, only when it runs, so each star is a rhythm: slow light taps for one star,
-// quicker and longer for each star up, unbroken for five. The steps are coarse on purpose: a
-// phone motor needs 20-30ms just to spin up, so finer slices (tried: 8 of every 40ms) felt like
-// nothing at the bottom and one buzz at the top.
-const HUM: [number, number][] = [
-  [20, 150], // on, off (ms)
-  [28, 95],
-  [38, 55],
-  [55, 25],
-  [1000, 0],
-];
-let humming: ReturnType<typeof setInterval> | undefined;
+// One firm tick for each star that lights up or goes dark under a finger, stronger the higher the
+// star. A page can't set the motor's strength, only how long it runs, and a phone motor needs
+// 20-30ms just to spin up, so the lightest is 22ms.
+const STARS = [22, 30, 38, 48, 60];
 
 /** Vibrates where the phone can (Android); does nothing anywhere else. A newer one replaces it. */
 export function haptic(kind: Haptic) {
@@ -46,27 +36,6 @@ export function haptic(kind: Haptic) {
 /** The star under the finger, 1 to 5, light to strong. */
 export function starHaptic(n: number) {
   vibrate([STARS[Math.min(5, Math.max(1, n)) - 1]]);
-}
-
-/** Starts (or changes) the hum for the star under a held finger; `stopHum` ends it. */
-export function humStar(n: number) {
-  const [on, off] = HUM[Math.min(5, Math.max(1, n)) - 1];
-  // about three seconds is queued (Chrome takes at most 99 steps) and renewed before it runs out
-  const pattern = off ? Array.from({ length: Math.min(98, 2 * Math.ceil(3000 / (on + off))) }, (_, i) => (i % 2 ? off : on)) : [3000];
-  clearInterval(humming);
-  vibrate(pattern);
-  humming = setInterval(() => vibrate(pattern), 2800);
-}
-
-export function stopHum() {
-  if (humming === undefined) return;
-  clearInterval(humming);
-  humming = undefined;
-  // straight to the browser: a stop is not a haptic, so it must not hold back the tap that follows
-  try {
-    navigator.vibrate?.(0);
-  } catch {}
-  debug?.("stop");
 }
 
 // `?debug=haptics` on a review link: what the stars receive and what the browser answers to each
@@ -94,7 +63,7 @@ let last = -Infinity;
 function vibrate(pattern: number[]) {
   if (typeof navigator === "undefined" || typeof navigator.vibrate !== "function") return;
   const ua = navigator.userActivation;
-  const what = pattern.length > 3 ? `hum ${pattern[0]}/${pattern[1]}` : JSON.stringify(pattern);
+  const what = JSON.stringify(pattern);
   // Chrome refuses (and warns in the console) before the first touch.
   if (ua && !ua.hasBeenActive) {
     debug?.(`${what}: not sent, no tap on the page yet`);
