@@ -348,8 +348,16 @@ export function NoteStep({
   onGoogle: () => void;
   bar: React.ReactNode;
 }) {
+  // Two taps in the same frame both reach the form before the button turns to "Sending":
+  // the second is dropped here, so the owner never gets the same note twice.
+  const sending = useRef(false);
   const [state, action] = useActionState(async (prev: Awaited<ReturnType<typeof sendFeedback>>, form: FormData) => {
-    const result = await sendFeedback(prev, form);
+    let result: Awaited<ReturnType<typeof sendFeedback>> | undefined;
+    try {
+      result = await sendFeedback(prev, form);
+    } finally {
+      if (!result?.ok) sending.current = false; // a failed send can be tried again
+    }
     // Moves on once the action has settled, outside its transition.
     if (result?.ok) setTimeout(onSent, 0);
     return result;
@@ -362,7 +370,14 @@ export function NoteStep({
 
   // Our own message instead of the browser's bubble when the note is empty.
   function check(e: React.FormEvent<HTMLFormElement>) {
-    if ((box.current?.value.trim().length ?? 0) >= 3) return;
+    if (sending.current) {
+      e.preventDefault();
+      return;
+    }
+    if ((box.current?.value.trim().length ?? 0) >= 3) {
+      sending.current = true;
+      return;
+    }
     e.preventDefault();
     setEmpty(true);
     box.current?.focus();
@@ -470,23 +485,6 @@ export function ThanksStep({ t, rtl, kind, name, onAgain }: { t: Copy; rtl: bool
 }
 
 /* ------------------------------------------------------------------ small parts */
-
-// For browsers without the async clipboard (older Android WebViews inside WhatsApp, Instagram).
-export function legacyCopy(text: string) {
-  const area = document.createElement("textarea");
-  area.value = text;
-  area.setAttribute("readonly", "");
-  area.style.cssText = "position:fixed;top:0;left:0;opacity:0;pointer-events:none";
-  document.body.appendChild(area);
-  area.select();
-  area.setSelectionRange(0, text.length);
-  let ok = false;
-  try {
-    ok = document.execCommand("copy");
-  } catch {}
-  area.remove();
-  return ok;
-}
 
 // Google's "G", drawn in the button's ink so it reads as a destination, not a logo sticker.
 export function GoogleMark() {

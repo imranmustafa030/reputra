@@ -273,7 +273,7 @@ function PlaceSearch({ onConnected }: { onConnected: (place: GooglePlace, url: s
                   className={`flex cursor-pointer items-start gap-3 px-4 py-2.5 ${i === active ? "bg-hover" : "hover:bg-hover"}`}
                   onMouseDown={(e) => e.preventDefault()} // keep focus so blur doesn't close the list first
                   onClick={() => pick(s)}
-                  onMouseEnter={() => setActive(i)}
+                  onPointerEnter={(e) => e.pointerType === "mouse" && setActive(i)} // a finger scrolling the list leaves no highlight behind
                 >
                   <MapPin aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-faint" strokeWidth={1.75} />
                   <span className="min-w-0">

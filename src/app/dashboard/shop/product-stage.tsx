@@ -7,6 +7,7 @@ import { ContactShadows } from "@react-three/drei/core/ContactShadows";
 import { drawPrint, type ProductKind } from "./stage/artwork";
 import { applyStudioEnvironment } from "./stage/environment";
 import { Card, FLOOR_Y, RefractionBackdrop, Stand, Sticker } from "./stage/models";
+import { ProductStageSkeleton } from "./product-stage-skeleton";
 
 export type { ProductKind };
 
@@ -122,6 +123,7 @@ function Scene({
   active,
   onSlow,
   fadeRef,
+  skeletonRef,
   dragRef,
   kickRef,
 }: {
@@ -133,6 +135,7 @@ function Scene({
   active: boolean;
   onSlow: () => void;
   fadeRef: RefObject<HTMLDivElement | null>;
+  skeletonRef: RefObject<HTMLDivElement | null>;
   dragRef: RefObject<Drag>;
   kickRef: RefObject<() => void>;
 }) {
@@ -306,6 +309,12 @@ function Scene({
       a.opacity = a.cur.o;
       fade.style.opacity = a.cur.o.toFixed(3);
     }
+    // the loading placeholder stays until the first product arrives, and hands over to it
+    const skeleton = skeletonRef.current;
+    if (skeleton && a.cur.o > 0) {
+      skeleton.style.opacity = (1 - a.cur.o).toFixed(3);
+      if (a.cur.o >= 0.999) skeleton.style.display = "none";
+    }
 
     // drag: follow the hand closely, settle back softly when let go
     const follow = d.active ? 16 : still ? 9 : 4.2;
@@ -411,6 +420,7 @@ function FlatPrint({ product, businessName, font }: { product: ProductKind; busi
 export default function ProductStage({ product, businessName, className = "" }: { product: ProductKind; businessName: string; className?: string }) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const fadeRef = useRef<HTMLDivElement>(null);
+  const skeletonRef = useRef<HTMLDivElement>(null);
   const drag = useRef<Drag>({ active: false, id: -1, x: 0, y: 0, yaw: 0, pitch: 0, ry: 0, rx: 0, releasedAt: 0 });
   const kick = useRef<() => void>(() => {});
   const [onScreen, setOnScreen] = useState(true);
@@ -478,6 +488,11 @@ export default function ProductStage({ product, businessName, className = "" }: 
       onLostPointerCapture={onPointerEnd}
     >
       <StageBoundary fallback={<FlatPrint product={product} businessName={businessName} font={font} />}>
+        {/* the same placeholder the page showed while this code loaded, held until the scene has
+            built and compiled, so the box never sits empty in between */}
+        <div ref={skeletonRef} className="absolute inset-0">
+          <ProductStageSkeleton />
+        </div>
         <div ref={fadeRef} aria-hidden="true" className="absolute inset-0 opacity-0 will-change-[opacity]">
           <Canvas
             frameloop={onScreen ? "demand" : "never"}
@@ -500,6 +515,7 @@ export default function ProductStage({ product, businessName, className = "" }: 
               active={onScreen}
               onSlow={() => setSlow(true)}
               fadeRef={fadeRef}
+              skeletonRef={skeletonRef}
               dragRef={drag}
               kickRef={kick}
             />

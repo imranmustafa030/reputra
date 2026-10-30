@@ -4,7 +4,8 @@ import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "
 import { flushSync } from "react-dom";
 import { ArrowRight, Moon, Sun } from "lucide-react";
 import { COPY, LANG_NAMES, LANGS, type Lang } from "./copy";
-import { DraftsStep, legacyCopy, MAX_PICKS, NoteStep, PicksStep, StepBar, ThanksStep, type Drafts } from "./steps";
+import { copyText } from "@/lib/clipboard";
+import { DraftsStep, MAX_PICKS, NoteStep, PicksStep, StepBar, ThanksStep, type Drafts } from "./steps";
 
 type Props = {
   // slug: what the page reports back with (the item's code, or the old slug); base: the page's own address.
@@ -98,6 +99,7 @@ export function ReviewFlow({ business, source, preview = false }: Props) {
   const [copyFailed, setCopyFailed] = useState(false);
   const [thanks, setThanks] = useState<"google" | "note">("google");
   const sent = useRef(false);
+  const opening = useRef(false); // Google is on its way: a second tap must not open (and count) it twice
   const latest = useRef(0);
   const advance = useRef<ReturnType<typeof setTimeout>>(undefined);
   const request = useRef<AbortController | null>(null);
@@ -153,12 +155,17 @@ export function ReviewFlow({ business, source, preview = false }: Props) {
   // Moves to a step. Forward steps are history entries; the back gesture comes in through popstate.
   const show = useCallback((next: Screen, how: { back?: boolean; push?: boolean } = {}) => {
     const dir = how.back ? "back" : "fwd";
-    if (how.push) history.pushState({ rv: next }, "");
+    if (how.push) {
+      // a second tap while the step is still changing would stack the same step twice in history
+      if (history.state?.rv === next) return;
+      history.pushState({ rv: next }, "");
+    }
     window.scrollTo(0, 0);
     const motion = !matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (motion && document.startViewTransition) {
       document.documentElement.dataset.rvDir = dir;
-      document.startViewTransition(() => flushSync(() => setScreen(next)));
+      // a newer step (two quick back swipes) skips this one's animation; that is fine, not an error
+      document.startViewTransition(() => flushSync(() => setScreen(next))).ready.catch(() => {});
     } else {
       setEnter(motion ? dir : "");
       setScreen(next);
@@ -169,7 +176,11 @@ export function ReviewFlow({ business, source, preview = false }: Props) {
     history.replaceState({ ...history.state, rv: restored ? "thanks" : "rate" }, "");
     const onPop = (e: PopStateEvent) => show((e.state?.rv as Screen) ?? "rate", { back: true });
     // Coming back from Google with the back button shows the thank-you as it was left.
-    const onShow = (e: PageTransitionEvent) => e.persisted && setCopied(false);
+    const onShow = (e: PageTransitionEvent) => {
+      if (!e.persisted) return;
+      opening.current = false;
+      setCopied(false);
+    };
     window.addEventListener("popstate", onPop);
     window.addEventListener("pageshow", onShow);
     return () => {
@@ -285,14 +296,8 @@ export function ReviewFlow({ business, source, preview = false }: Props) {
   // behind, so coming back from Google lands on it, and Google opens a beat later.
   async function copyAndOpen() {
     const text = drafts?.texts[chosen]?.trim();
-    if (!text) return;
-    let ok = false;
-    try {
-      await navigator.clipboard.writeText(text);
-      ok = true;
-    } catch {
-      ok = legacyCopy(text);
-    }
+    if (!text || opening.current) return;
+    const ok = await copyText(text);
     if (!ok) {
       setCopyFailed(true);
       return;
@@ -300,6 +305,7 @@ export function ReviewFlow({ business, source, preview = false }: Props) {
     try {
       navigator.vibrate?.(12);
     } catch {}
+    opening.current = true;
     flush();
     setCopied(true);
     try {
@@ -379,7 +385,7 @@ export function ReviewFlow({ business, source, preview = false }: Props) {
                 </h2>
 
                 <div className="relative mt-8" dir="ltr">
-                  <div role="radiogroup" aria-label={t.question} className="relative flex justify-between gap-1" onMouseLeave={() => setHover(0)} onKeyDown={onKey}>
+                  <div role="radiogroup" aria-label={t.question} className="relative flex justify-between gap-1" onPointerLeave={() => setHover(0)} onKeyDown={onKey}>
                     {[1, 2, 3, 4, 5].map((n) => {
                       const on = n <= shown;
                       return (
@@ -391,7 +397,9 @@ export function ReviewFlow({ business, source, preview = false }: Props) {
                           aria-label={`${t.starName(n)}: ${t.labels[n - 1]}`}
                           tabIndex={rating ? (rating === n ? 0 : -1) : n === 1 ? 0 : -1}
                           onClick={() => choose(n, true)}
-                          onMouseEnter={() => setHover(n)}
+                          // Only a real mouse previews. A tap also fires mouse events that never
+                          // "leave", which used to keep a second finger's stars lit over the rating.
+                          onPointerEnter={(e) => e.pointerType === "mouse" && setHover(n)}
                           className={`rv-star rv-in ${on ? "is-on" : ""} ${rating && n <= rating ? "is-set" : ""} ${hover && !rating ? "is-preview" : ""}`}
                           style={{ "--d": `${220 + n * 60}ms`, "--k": `${(n - 1) * 45}ms` } as React.CSSProperties}
                         >
@@ -509,7 +517,7 @@ export function ReviewFlow({ business, source, preview = false }: Props) {
             name={business.name}
             onAgain={() => {
               const text = drafts?.texts[chosen]?.trim() || restored?.text;
-              if (text) navigator.clipboard?.writeText(text).catch(() => legacyCopy(text));
+              if (text) copyText(text);
               // eslint-disable-next-line @next/next/no-location-assign-relative-destination
               window.location.assign(googleHref);
             }}

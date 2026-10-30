@@ -108,8 +108,12 @@
       border-color 0.16s,
       opacity 0.16s;
   }
-  .btn:hover {
-    background-color: var(--color-ink-3);
+  /* Hover looks apply only where there is a real pointer (here and throughout): on a phone a
+     tapped button would keep its hover colour until the next tap elsewhere. Touch gets :active. */
+  @media (hover: hover) {
+    .btn:hover {
+      background-color: var(--color-ink-3);
+    }
   }
   .btn:active {
     transform: scale(0.98);
@@ -134,8 +138,10 @@
     background: var(--color-amber);
     color: var(--color-ink);
   }
-  .btn-gold:hover {
-    background: oklch(78% 0.165 74);
+  @media (hover: hover) {
+    .btn-gold:hover {
+      background: oklch(78% 0.165 74);
+    }
   }
   .btn-ghost,
   .btn-secondary {
@@ -143,24 +149,30 @@
     color: var(--color-ink);
     border-color: var(--color-control);
   }
-  .btn-ghost:hover,
-  .btn-secondary:hover {
-    background: var(--color-hover);
+  @media (hover: hover) {
+    .btn-ghost:hover,
+    .btn-secondary:hover {
+      background: var(--color-hover);
+    }
   }
   .dark-surface .btn-ghost {
     background: transparent;
     color: inherit;
   }
-  .dark-surface .btn-ghost:hover {
-    background: oklch(99.4% 0.001 265 / 0.06);
+  @media (hover: hover) {
+    .dark-surface .btn-ghost:hover {
+      background: oklch(99.4% 0.001 265 / 0.06);
+    }
   }
   .btn-danger {
     background: var(--color-sheet);
     color: var(--color-negative);
     border-color: var(--color-control);
   }
-  .btn-danger:hover {
-    background: var(--color-negative-wash);
+  @media (hover: hover) {
+    .btn-danger:hover {
+      background: var(--color-negative-wash);
+    }
   }
   .link {
     font-weight: 500;
@@ -168,8 +180,10 @@
     text-decoration: underline;
     text-decoration-color: var(--color-control);
   }
-  .link:hover {
-    text-decoration-color: currentColor;
+  @media (hover: hover) {
+    .link:hover {
+      text-decoration-color: currentColor;
+    }
   }
 
   /* ----------------------------------------------------------------- fields */
@@ -195,8 +209,10 @@
   .input::placeholder {
     color: var(--color-faint);
   }
-  .input:hover {
-    border-color: oklch(76% 0.006 85);
+  @media (hover: hover) {
+    .input:hover {
+      border-color: oklch(76% 0.006 85);
+    }
   }
   .input:focus {
     outline: none;
@@ -269,8 +285,10 @@
   .tbl tbody tr {
     transition: background-color 0.12s;
   }
-  .tbl tbody tr[data-href]:hover {
-    background: oklch(98.6% 0.003 85);
+  @media (hover: hover) {
+    .tbl tbody tr[data-href]:hover {
+      background: oklch(98.6% 0.003 85);
+    }
   }
 
   /* ----------------------------------------------------------------- pills
@@ -392,8 +410,10 @@
     border-bottom: 2px solid transparent;
     transition: color 0.15s;
   }
-  .tabs a:hover {
-    color: var(--color-ink);
+  @media (hover: hover) {
+    .tabs a:hover {
+      color: var(--color-ink);
+    }
   }
   .tabs a[aria-current="page"] {
     color: var(--color-ink);
@@ -617,8 +637,10 @@
 .step-arrow {
   transition: transform 240ms var(--ease-out-quint);
 }
-.group:hover .step-arrow {
-  transform: translateX(3px);
+@media (hover: hover) {
+  .group:hover .step-arrow {
+    transform: translateX(3px);
+  }
 }
 
 /* ------------------------------------------------- the customer review page */
@@ -697,6 +719,7 @@
   height: 60px;
   border-radius: 999px;
   cursor: pointer;
+  touch-action: manipulation; /* no double-tap zoom when a customer taps two stars quickly */
   -webkit-tap-highlight-color: transparent;
 }
 .rv-star svg {
@@ -712,11 +735,12 @@
   transition:
     fill 220ms ease,
     stroke 220ms ease;
-  transition-delay: var(--k, 0ms);
 }
+/* stars light up one after another, and go out together the moment a lower star is chosen */
 .rv-star.is-on path {
   fill: var(--color-amber);
   stroke: var(--color-amber);
+  transition-delay: var(--k, 0ms);
 }
 .rv-star.is-preview.is-on path {
   fill: oklch(81% 0.165 76 / 0.55);
@@ -752,8 +776,10 @@
 .rv-google .rv-arrow {
   transition: transform 240ms var(--ease-out-quint);
 }
-.rv-google:hover .rv-arrow {
-  transform: translateX(4px);
+@media (hover: hover) {
+  .rv-google:hover .rv-arrow {
+    transform: translateX(4px);
+  }
 }
 [dir="rtl"] .rv-google:hover .rv-arrow {
   transform: translateX(-4px) rotate(180deg);
@@ -1087,8 +1113,10 @@ body:has(.rv-page[data-theme="light"]) {
   color: var(--rv-fg2);
   cursor: pointer;
 }
-.rv-reply:hover {
-  color: var(--rv-fg);
+@media (hover: hover) {
+  .rv-reply:hover {
+    color: var(--rv-fg);
+  }
 }
 .rv-reply-fields {
   margin-top: 4px;
@@ -1464,8 +1492,10 @@ body:has(.rv-page[data-theme="light"]) {
   color: inherit;
   border-color: var(--rv-line);
 }
-.rv-page .btn-ghost:hover {
-  background: var(--rv-field);
+@media (hover: hover) {
+  .rv-page .btn-ghost:hover {
+    background: var(--rv-field);
+  }
 }
 .rv-page :focus-visible {
   outline-color: var(--rv-fg);
@@ -1672,8 +1702,10 @@ body:has(.rv-page[data-theme="light"]) {
     box-shadow 200ms var(--ease-out-quint),
     background-color 160ms ease;
 }
-.tf-box:hover {
-  border-color: oklch(42% 0.006 85);
+@media (hover: hover) {
+  .tf-box:hover {
+    border-color: oklch(42% 0.006 85);
+  }
 }
 .tf-box:focus-within {
   border-color: var(--color-ink);
@@ -1734,9 +1766,11 @@ body:has(.rv-page[data-theme="light"]) {
     background-color 160ms,
     color 160ms;
 }
-.tf-reveal:hover {
-  background: var(--color-hover);
-  color: var(--color-ink);
+@media (hover: hover) {
+  .tf-reveal:hover {
+    background: var(--color-hover);
+    color: var(--color-ink);
+  }
 }
 .tf-tick + .tf-reveal {
   margin-left: -8px;
@@ -1809,8 +1843,10 @@ body:has(.rv-page[data-theme="light"]) {
   cursor: pointer;
   transition: border-color 160ms ease;
 }
-.slip-change:hover {
-  border-color: var(--color-ink);
+@media (hover: hover) {
+  .slip-change:hover {
+    border-color: var(--color-ink);
+  }
 }
 /* a touch target of 44px around the 32px chip */
 .slip-change {
@@ -1863,8 +1899,10 @@ body:has(.rv-page[data-theme="light"]) {
     background-color 160ms ease,
     transform 160ms var(--ease-out-expo);
 }
-.slip-plan:hover {
-  border-color: oklch(42% 0.006 85);
+@media (hover: hover) {
+  .slip-plan:hover {
+    border-color: oklch(42% 0.006 85);
+  }
 }
 .slip-plan:active {
   transform: scale(0.985);
@@ -1935,8 +1973,10 @@ body:has(.rv-page[data-theme="light"]) {
     transform 160ms var(--ease-out-expo),
     background-color 160ms;
 }
-.slip-go:hover {
-  background: var(--color-ink-3);
+@media (hover: hover) {
+  .slip-go:hover {
+    background: var(--color-ink-3);
+  }
 }
 .slip-go:active {
   transform: scale(0.985);
@@ -1948,8 +1988,10 @@ body:has(.rv-page[data-theme="light"]) {
 .slip-go-arrow {
   transition: transform 260ms var(--ease-out-quint);
 }
-.slip-go:hover .slip-go-arrow {
-  transform: translateX(4px);
+@media (hover: hover) {
+  .slip-go:hover .slip-go-arrow {
+    transform: translateX(4px);
+  }
 }
 .slip-small {
   margin-top: -4px;
@@ -2331,9 +2373,12 @@ body:has(.rv-page[data-theme="light"]) {
    tap, and a dive into its amber dot. It ends on flat amber; the page takes over on that amber
    with a title card (the thanks and the business name rising on masked lines), then the amber
    lifts away and the page's own entrance plays beneath it. The phases live on <html
-   data-rv-intro>: on (film) → title → lift → done; or off / skip. See src/app/r/[slug]/intro.tsx. */
-/* Until the page decides, the stage is laid out but invisible and inert, so the browser loads the
-   film (it may hold back media that isn't rendered at all). */
+   data-rv-intro>: wait (asked to play, not shown yet) → on (film) → title → lift → done; or off.
+   Without the film (data-rv-intro-film="no") the title card plays on its own, on amber.
+   See src/app/r/[slug]/intro.tsx. */
+/* Until the film is really playing, the stage is laid out but invisible and inert, so the browser
+   loads and starts the film (it may hold back media that isn't rendered at all) while the customer
+   never sees an empty black frame. */
 .rv-film {
   position: fixed;
   inset: 0;
@@ -2360,10 +2405,21 @@ html[data-rv-intro="done"] .rv-film {
     opacity: 1;
     pointer-events: auto;
     cursor: pointer;
+    /* the film's first frame fades in over the waiting page instead of cutting to it */
+    transition: opacity 160ms ease;
+  }
+  /* the title card on its own: the stage is the card's amber, and it fades in */
+  html[data-rv-intro-film="no"] .rv-film {
+    background: #eeac2c;
+    transition: opacity 200ms ease;
+  }
+  html[data-rv-intro-film="no"] .rv-film video {
+    display: none;
   }
   /* the page waits, paused on its first frame, until the amber lifts */
-  html[data-rv-intro="on"] .rv-with-intro .rv-in,
-  html[data-rv-intro="title"] .rv-with-intro .rv-in {
+  html[data-rv-intro="wait"] .rv-with-intro :is(.rv-in, .rv-word),
+  html[data-rv-intro="on"] .rv-with-intro :is(.rv-in, .rv-word),
+  html[data-rv-intro="title"] .rv-with-intro :is(.rv-in, .rv-word) {
     animation-play-state: paused;
   }
 }

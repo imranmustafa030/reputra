@@ -18,29 +18,39 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://reputra-inky.vercel.app/opengraph-image">
 <meta name="theme-color" content="#0b0c0e">
-<!-- the import map comes before any module load or preload, or the browser ignores it -->
+<!-- the import map comes before any module load or preload, or the browser ignores it. three.js is served from
+     this site too (minified from the npm package, same version), so the 3D stage never waits on another server -->
 <script type="importmap">
 {"imports":{
-  "three": "https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.min.js",
-  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/",
-  "https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.core.js": "https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.core.min.js"
+  "three": "/vendor/three-0.186.1/three.module.js",
+  "three/addons/": "/vendor/three-0.186.1/addons/"
 }}
 </script>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='6' fill='%230b0c0e'/%3E%3Ccircle cx='8.5' cy='12' r='3.2' fill='%23f0ad2e'/%3E%3Cpath d='M14.2 5.4a8.6 8.6 0 0 1 0 13.2' fill='none' stroke='%23f0ad2e' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E">
-<link rel="preload" href="img/gulberg.svg" as="fetch" crossorigin>
-<link rel="preconnect" href="https://fonts.googleapis.com">
+<!-- First visits on phone internet are the normal case, so everything the first screen needs comes from this
+     site, in this order: the Geist font (self-hosted, so drawing never waits on a second server), the styles,
+     then the scripts (deferred, so they never hold up the first paint). The street map follows at low
+     priority, and three.js (also ours) only once the hero has landed (see below). -->
+<link rel="preload" href="fonts/geist-latin.v1.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="img/gulberg.svg" as="fetch" crossorigin fetchpriority="low">
+<!-- Urdu (only the live review demo below uses it) loads without holding up the page -->
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@300..700&family=Noto+Nastaliq+Urdu:wght@500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@500&display=swap" media="print" onload="this.media='all'">
+<!-- the motion classes are set before the first paint, so the first frame drawn is the first frame of the
+     entrance, never the finished page that the entrance would then hide and replay -->
 <script>try { if (localStorage.getItem("reputra-theme") === "light") document.documentElement.dataset.theme = "light"; } catch (e) {}
+document.documentElement.classList.add("js");
+if (!matchMedia("(prefers-reduced-motion: reduce)").matches) document.documentElement.classList.add("motion");
 if (window.WebGLRenderingContext) document.documentElement.classList.add("has-card"); /* the stage's 3D layout from the first paint; card3d.js hands back if WebGL fails */</script>
 <link rel="stylesheet" href="site.css">
-<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-<link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.min.js">
-<link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.core.min.js">
-<link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/environments/RoomEnvironment.js">
+<script defer src="vendor/gsap-3.12.5.min.js"></script>
+<script defer src="vendor/scrolltrigger-3.12.5.min.js"></script>
+<script defer src="vendor/lenis-1.1.13.min.js"></script>
+<script defer src="site.js"></script>
 <script type="module">
   // The 3D stage is the heaviest thing on the page. It starts once the camera has landed and the browser is idle,
-  // or the moment the visitor heads for it (a scroll, a key, a link), never during the fly-in.
+  // or the moment the visitor heads for it (a scroll, a key, a link), never during the fly-in. three.js is not
+  // preloaded: on a phone line its download would compete with the font and the first screen.
   let started;
   const start = () => (started ??= import("./card3d.js").then(() => window.ScrollTrigger && ScrollTrigger.refresh(), () => {}));
   window.__card3d = start;
@@ -104,7 +114,12 @@ if (window.WebGLRenderingContext) document.documentElement.classList.add("has-ca
 
   <!-- 1 · The result first: reviews arriving from three ways in, the rating climbing -->
   <section class="intro" id="top" aria-labelledby="hero-title">
-    <h1 id="hero-title" class="display intro__title">More reviews.<br>Higher on Google.<br><span class="accent-phrase">More customers.</span></h1>
+    <!-- split into words here, not by script, so the first paint already holds them below their masks -->
+    <h1 id="hero-title" class="display intro__title words" aria-label="More reviews. Higher on Google. More customers."><span class="w" aria-hidden="true"><span style="--i:0">More</span></span> <span class="w" aria-hidden="true"><span style="--i:1">reviews.</span></span><br><span class="w" aria-hidden="true"><span style="--i:2">Higher</span></span> <span class="w" aria-hidden="true"><span style="--i:3">on</span></span> <span class="w" aria-hidden="true"><span style="--i:4">Google.</span></span><br><span class="accent-phrase"><span class="w" aria-hidden="true"><span style="--i:5">More</span></span> <span class="w" aria-hidden="true"><span style="--i:6">customers.</span></span></span></h1>
+    <!-- the words rise once Geist is in (so they never change shape mid-rise), or after 1.2s whatever happens;
+         two frames, so the hidden state is drawn first and the rise plays even when the font is already cached -->
+    <script>(function () { var h = document.getElementById("hero-title"), go = function () { requestAnimationFrame(function () { requestAnimationFrame(function () { h.classList.add("is-in"); }); }); }, t = setTimeout(go, 1200);
+      if (document.fonts && document.fonts.load) document.fonts.load('600 1em Geist').then(function () { clearTimeout(t); go(); }, function () {}); else { clearTimeout(t); go(); } })();</script>
     <div class="intro__foot">
       <p class="lede">Every happy customer, asked for a Google review: at your counter or on WhatsApp, in Urdu or English.</p>
       <div class="actions">
@@ -350,9 +365,5 @@ if (window.WebGLRenderingContext) document.documentElement.classList.add("has-ca
   <p class="credits">© 2026 Reputra · Lahore. Map data © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors.</p>
 </footer>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/lenis@1.1.13/dist/lenis.min.js"></script>
-<script src="site.js"></script>
 </body>
 </html>

@@ -13,17 +13,26 @@
 // H.264 for iPhones (92 / 200 KB), cached for a year. Every source requires
 // prefers-reduced-motion: no-preference, so those phones download nothing.
 //
+// <FilmStage> also carries a tiny script that runs as the shell is parsed, before the download
+// begins: it drops the sources when this visit will never show the film (reduced motion, Data Saver,
+// a 2G connection, already played in this tab, or not a review page), so those phones download nothing.
+// Otherwise it starts the film unseen and pauses it on its first frame: that makes iPhones (which
+// ignore preload) fetch it now, and wakes the decoder, so the film can appear the moment it's asked.
+//
 // <Intro> streams in with the business and takes control with an inline script (before React,
-// which never touches either half while hydrating). It decides: not if the owner turned it off;
-// never for reduced motion or Data Saver; not on a connection the browser classes as 2G or 3G;
-// once per tab (coming back from Google doesn't replay it). It only reads the browser's class of
-// connection, never its raw speed figure: that is a rough estimate and reads low on perfectly fast
-// lines. The owner's preview link ignores the connection and the once-per-tab rule, so it always
-// plays (it also waits up to 6s for the film, where a customer gets 1.3s). When it says no, the
-// download is cancelled and <html data-rv-intro-why> says why. If the film still hasn't started
-// 1.3s later, it is dropped and the page opens at once: no customer waits on a black screen for an
-// intro. Phases live on <html data-rv-intro>: on → title → lift → done,
-// or off.
+// which never touches either half while hydrating). The rule is that the customer never looks at
+// a black or frozen screen:
+//   wait  the film is asked to play, but the stage stays invisible and the page holds still,
+//         until the video is really playing (moving, with frames to spare); then the film fades in
+//         on its first frame (on).
+//   card  if the film isn't playing within half a second (slow line, iPhone in Low Power Mode,
+//         a decoder that refuses), or stalls midway, or the shell dropped it, the page skips
+//         straight to the title card. It is CSS on flat amber, so it needs nothing from the network.
+// No intro at all when the owner turned it off, for reduced motion, or once it has played in this
+// tab (coming back from Google doesn't replay it). The owner's preview link ignores that last rule
+// and waits up to 6s for the film. <html data-rv-intro> holds the phase: wait → on → title → lift →
+// done, or off; data-rv-intro-film="no" marks the title card without the film, and
+// data-rv-intro-why says why something was skipped.
 
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
 
@@ -40,14 +49,23 @@ const SOURCES = [
   .map(([src, type, media]) => `<source src="${src}" type='${type}' media="${media}">`)
   .join("");
 
+// Runs as the shell is parsed, before the video's resource selection starts fetching.
+const SHELL = `(function(){
+var d=document.documentElement,v=document.querySelector("#rv-film video");if(!v)return;
+var n=navigator.connection||{},m=location.pathname.match(/^\\/t\\/([^\\/?#]+)/),why="";
+try{why=!m?"not a review page":matchMedia("(prefers-reduced-motion: reduce)").matches?"reduced motion":n.saveData?"data saver":/2g/.test(n.effectiveType||"")?"slow connection ("+n.effectiveType+")":(!/[?&]preview=1(&|$)/.test(location.search)&&sessionStorage.getItem("reputra:intro:"+m[1].toUpperCase()))?"already played in this tab":""}catch(e){}
+if(why){d.dataset.rvFilmWhy=why;while(v.firstChild)v.removeChild(v.firstChild);v.load();return}
+v.muted=true;try{var p=v.play();if(p)p.then(function(){if(!v.dataset.claimed){v.pause();v.currentTime=0}},function(){})}catch(e){}
+})()`;
+
 export function FilmStage() {
   return (
-    // The film's script starts, trims or stops the video before React hydrates, on purpose.
+    // The film's scripts start, trim or stop the video before React hydrates, on purpose.
     <div
       className="contents"
       suppressHydrationWarning
       dangerouslySetInnerHTML={{
-        __html: `<div id="rv-film" class="rv-film" aria-hidden="true"><video muted playsinline disablepictureinpicture preload="auto">${SOURCES}</video></div>`,
+        __html: `<div id="rv-film" class="rv-film" aria-hidden="true"><video muted playsinline disablepictureinpicture preload="auto">${SOURCES}</video></div><script>${SHELL}</script>`,
       }}
     />
   );
@@ -59,21 +77,26 @@ var d=document.documentElement,f=document.getElementById("rv-film"),t=document.c
 if(!f)return;var v=f.querySelector("video");
 function set(p){d.dataset.rvIntro=p}
 function stop(){v.pause();while(v.firstChild)v.removeChild(v.firstChild);v.removeAttribute("src");v.load()}
-var n=navigator.connection||{},why="";
-try{why=${enabled ? '""' : '"turned off in Settings"'}||(matchMedia("(prefers-reduced-motion: reduce)").matches?"reduced motion":"")||(n.saveData?"data saver":"")${force ? "" : `||(/2g|3g/.test(n.effectiveType||"")?"slow connection ("+n.effectiveType+")":"")||(sessionStorage.getItem(K)?"already played in this tab":"")`};
+var why="";
+try{why=${enabled ? '""' : '"turned off in Settings"'}||(matchMedia("(prefers-reduced-motion: reduce)").matches?"reduced motion":"")${force ? "" : `||(sessionStorage.getItem(K)?"already played in this tab":"")`};
 if(why){set("off");d.dataset.rvIntroWhy=why;stop();t.remove();return}sessionStorage.setItem(K,"1")}catch(e){}
 f.appendChild(t);
 try{var l=localStorage.getItem("reputra:lang"),T=${JSON.stringify(thanks)};if(l&&T[l]){t.querySelector(".rv-film-thanks").textContent=T[l];if(l==="ur")t.dir="rtl"}}catch(e){}
-var phase="on",started=v.currentTime>0;set("on");
-function title(){if(phase!=="on")return;phase="title";set("title");setTimeout(lift,720)}
-function lift(){if(phase==="lift"||phase==="done")return;phase="lift";set("lift");setTimeout(function(){phase="done";set("done");stop()},620)}
-function fail(){if(started)title();else lift()}
-v.addEventListener("playing",function(){started=1});
+var phase="wait",stall=0;
+function title(){if(phase!=="wait"&&phase!=="on")return;if(phase==="wait"){d.dataset.rvIntroFilm="no";stop()}phase="title";set("title");setTimeout(lift,720)}
+function card(why){if(phase==="wait")d.dataset.rvIntroWhy=why;title()}
+function lift(){if(phase==="lift"||phase==="done"||phase==="off")return;phase="lift";set("lift");setTimeout(function(){phase="done";set("done");stop()},620)}
+function skip(){if(phase==="wait"){phase="off";set("off");stop()}else lift()}
+if(!v.querySelector("source")||v.networkState===3){card(d.dataset.rvFilmWhy||"film failed")}else{
+set("wait");v.dataset.claimed="1";
+v.addEventListener("playing",function(){clearTimeout(stall)});
+v.addEventListener("waiting",function(){if(phase==="on"){clearTimeout(stall);stall=setTimeout(title,300)}});
 v.addEventListener("timeupdate",function(){if(v.currentTime>=1.72)title()});
-v.addEventListener("ended",title);v.addEventListener("error",fail,true);
-setTimeout(function(){if(!started){d.dataset.rvIntroWhy="film did not start in time";lift()}},${force ? 6000 : 1300});
-f.addEventListener("pointerdown",lift);addEventListener("keydown",lift,{once:true});
-v.muted=true;var p=v.play();if(p&&p.catch)p.catch(fail);
+v.addEventListener("ended",title);v.addEventListener("error",function(){card("film failed")},true);
+setTimeout(function(){if(phase==="wait")card("film not ready in time")},${force ? 6000 : 500});
+(function shown(){if(phase!=="wait")return;if(!v.paused&&v.currentTime>0&&v.readyState>2){phase="on";set("on")}else requestAnimationFrame(shown)})();
+v.muted=true;if(v.currentTime>0)v.currentTime=0;var p=v.play();if(p&&p.catch)p.catch(function(){card("film blocked")})}
+f.addEventListener("pointerdown",skip);addEventListener("pointerdown",function(e){if(phase==="wait")skip()},{once:true});addEventListener("keydown",skip,{once:true});
 })()`;
 
   const html = enabled

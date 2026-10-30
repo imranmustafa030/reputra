@@ -1,11 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Check, Copy } from "lucide-react";
+import { copyText } from "@/lib/clipboard";
 
 // Joined to the field on its left by default (square inner corners); `standalone` rounds it fully.
+// Says so when the phone refuses to copy, and a second tap restarts the "Copied" moment instead of
+// letting the first tap's timer cut it short.
 export function CopyButton({ text, label = "Copy", standalone = false }: { text: string; label?: string; standalone?: boolean }) {
-  const [copied, setCopied] = useState(false);
+  const [state, setState] = useState<"idle" | "copied" | "failed">("idle");
+  const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
   return (
     <button
       type="button"
@@ -13,13 +17,14 @@ export function CopyButton({ text, label = "Copy", standalone = false }: { text:
         standalone ? "rounded-full" : "rounded-r-[10px]"
       }`}
       onClick={async () => {
-        await navigator.clipboard.writeText(text);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 1600);
+        const ok = await copyText(text);
+        setState(ok ? "copied" : "failed");
+        clearTimeout(timer.current);
+        timer.current = setTimeout(() => setState("idle"), ok ? 1600 : 2600);
       }}
     >
-      {copied ? <Check aria-hidden="true" className="pop size-4 text-positive" strokeWidth={2.25} /> : <Copy aria-hidden="true" className="size-4" strokeWidth={1.75} />}
-      <span aria-live="polite">{copied ? "Copied" : label}</span>
+      {state === "copied" ? <Check aria-hidden="true" className="pop size-4 text-positive" strokeWidth={2.25} /> : <Copy aria-hidden="true" className="size-4" strokeWidth={1.75} />}
+      <span aria-live="polite">{state === "copied" ? "Copied" : state === "failed" ? "Select and copy" : label}</span>
     </button>
   );
 }

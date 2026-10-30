@@ -79,6 +79,8 @@ All four live in one project, are deployed together on Vercel, and share one Mon
 
 The top bar has **Log in** (for existing customers) and **Get started**.
 
+Built for a first visit on phone internet: the font (Geist), the animation libraries (GSAP, Lenis) and three.js are served from our own site (`public/fonts/`, `public/vendor/`, version in the file name, cached for a year), so nothing waits on another server (only the Urdu font for the demo still comes from Google, in the background). three.js is minified from the npm package with esbuild. The page's first frame is the first frame of its entrance (never the finished page, then hidden and replayed). The 3D stage loads only after the hero has landed. To update a library, add the new version's file next to the old one and change the `<script>` in `public/index.html`.
+
 ### 4.2 Customer side: the review page ✅
 
 - Opens from the QR code, the NFC tap or the WhatsApp link. No app, no login.
