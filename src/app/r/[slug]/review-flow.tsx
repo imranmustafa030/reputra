@@ -5,6 +5,7 @@ import { flushSync } from "react-dom";
 import { ArrowRight, Moon, Sun } from "lucide-react";
 import { COPY, LANG_NAMES, LANGS, type Lang } from "./copy";
 import { copyText } from "@/lib/clipboard";
+import { haptic } from "@/lib/haptics";
 import { DraftsStep, MAX_PICKS, NoteStep, PicksStep, StepBar, ThanksStep, type Drafts } from "./steps";
 
 type Props = {
@@ -195,9 +196,7 @@ export function ReviewFlow({ business, source, preview = false }: Props) {
     latest.current = n;
     setRating(n);
     setBurst((b) => b + 1);
-    try {
-      navigator.vibrate?.(n === 5 ? [10, 50, 14] : 10);
-    } catch {}
+    haptic(n === 5 ? "success" : n === 4 ? "firm" : "tick");
     clearTimeout(advance.current);
     if (!go) return;
     if (n >= 4 && business.hasGoogleLink) loadWords(n);
@@ -226,6 +225,7 @@ export function ReviewFlow({ business, source, preview = false }: Props) {
 
   function toggle(key: string) {
     setNeedPick(false);
+    haptic("select");
     setPicks((now) => (now.includes(key) ? now.filter((k) => k !== key) : now.length < MAX_PICKS ? [...now, key] : now));
   }
 
@@ -261,6 +261,7 @@ export function ReviewFlow({ business, source, preview = false }: Props) {
     const bad = happy ? [] : tapped("b");
     if (!good.length && !bad.length && !extra.trim()) {
       setNeedPick(true);
+      haptic("error");
       return;
     }
     request.current?.abort();
@@ -282,7 +283,10 @@ export function ReviewFlow({ business, source, preview = false }: Props) {
       setDrafts((d) => ({ texts: [data.drafts.veryShort, data.drafts.short, data.drafts.medium], ai: data.ai, rating, round: (d?.round ?? 0) + 1 }));
       setChosen(1);
     } catch (err) {
-      if ((err as Error).name !== "AbortError") setFailed(true);
+      if ((err as Error).name !== "AbortError") {
+        setFailed(true);
+        haptic("error");
+      }
     } finally {
       if (request.current === controller) setBusy(false);
     }
@@ -300,11 +304,10 @@ export function ReviewFlow({ business, source, preview = false }: Props) {
     const ok = await copyText(text);
     if (!ok) {
       setCopyFailed(true);
+      haptic("error");
       return;
     }
-    try {
-      navigator.vibrate?.(12);
-    } catch {}
+    haptic("success");
     opening.current = true;
     flush();
     setCopied(true);
@@ -322,6 +325,7 @@ export function ReviewFlow({ business, source, preview = false }: Props) {
   }
 
   function noteSent() {
+    haptic("success");
     setThanks("note");
     show("thanks");
     history.replaceState({ ...history.state, rv: "thanks" }, "");
@@ -480,6 +484,7 @@ export function ReviewFlow({ business, source, preview = false }: Props) {
             copyFailed={copyFailed}
             googleHref={googleHref}
             onChoose={(i) => {
+              if (i !== chosen) haptic("select");
               setChosen(i);
               setCopyFailed(false);
             }}
@@ -517,6 +522,7 @@ export function ReviewFlow({ business, source, preview = false }: Props) {
             name={business.name}
             onAgain={() => {
               const text = drafts?.texts[chosen]?.trim() || restored?.text;
+              haptic("tick");
               if (text) copyText(text);
               // eslint-disable-next-line @next/next/no-location-assign-relative-destination
               window.location.assign(googleHref);
