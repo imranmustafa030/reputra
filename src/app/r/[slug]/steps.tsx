@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useRef, useState } from "react";
 import { AlertCircle, ArrowLeft, Check, ChevronDown, PenLine, RotateCw, Star } from "lucide-react";
 import { sendFeedback } from "@/app/actions/feedback";
+import { haptic } from "@/lib/haptics";
 import { SubmitButton } from "@/components/form";
 import type { Copy } from "./copy";
 
@@ -228,7 +229,8 @@ export function DraftsStep({
                 className={`rv-glass rv-draft ${picked ? "is-picked" : ""}`}
                 style={{ "--i": i } as React.CSSProperties}
               >
-                <button type="button" role="radio" aria-checked={picked} onClick={() => onChoose(i)} className="rv-draft-head">
+                {/* Its click (tap, Enter, Space) reaches the card's: one handler, so one choice per tap. */}
+                <button type="button" role="radio" aria-checked={picked} className="rv-draft-head">
                   <span>{t.write.versions[i]}</span>
                   <span aria-hidden="true" className={`rv-dot ${picked ? "is-on" : ""}`} />
                 </button>
@@ -358,6 +360,7 @@ export function NoteStep({
     } finally {
       if (!result?.ok) sending.current = false; // a failed send can be tried again
     }
+    if (!result?.ok) haptic("error");
     // Moves on once the action has settled, outside its transition.
     if (result?.ok) setTimeout(onSent, 0);
     return result;
@@ -380,6 +383,7 @@ export function NoteStep({
     }
     e.preventDefault();
     setEmpty(true);
+    haptic("error");
     box.current?.focus();
   }
 
