@@ -5,7 +5,7 @@ import { flushSync } from "react-dom";
 import { ArrowRight, Moon, Sun } from "lucide-react";
 import { COPY, LANG_NAMES, LANGS, type Lang } from "./copy";
 import { copyText } from "@/lib/clipboard";
-import { haptic } from "@/lib/haptics";
+import { haptic, HapticTap } from "@/lib/haptics";
 import { DraftsStep, MAX_PICKS, NoteStep, PicksStep, StepBar, ThanksStep, type Drafts } from "./steps";
 
 type Props = {
@@ -423,6 +423,7 @@ export function ReviewFlow({ business, source, preview = false }: Props) {
                                 ))}
                             </span>
                           )}
+                          <HapticTap />
                         </button>
                       );
                     })}

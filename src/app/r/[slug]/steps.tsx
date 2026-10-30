@@ -3,7 +3,7 @@
 import { useActionState, useEffect, useRef, useState } from "react";
 import { AlertCircle, ArrowLeft, Check, ChevronDown, PenLine, RotateCw, Star } from "lucide-react";
 import { sendFeedback } from "@/app/actions/feedback";
-import { haptic } from "@/lib/haptics";
+import { haptic, HapticTap } from "@/lib/haptics";
 import { SubmitButton } from "@/components/form";
 import type { Copy } from "./copy";
 
@@ -147,11 +147,12 @@ function ChipGroup({ label, list, kind, picks, onToggle }: { label: string; list
             aria-pressed={on}
             disabled={full && !on}
             onClick={() => onToggle(key)}
-            className={`rv-chip ${kind === "b" ? "is-issue" : ""}`}
+            className={`rv-chip relative ${kind === "b" ? "is-issue" : ""}`}
             style={{ "--i": i } as React.CSSProperties}
           >
             {on && <Check aria-hidden="true" className="rv-pop size-4 shrink-0" strokeWidth={2.5} />}
             {chip}
+            <HapticTap />
           </button>
         );
       })}
@@ -245,6 +246,7 @@ export function DraftsStep({
                 ) : (
                   <p className="rv-draft-text rv-clamp">{text}</p>
                 )}
+                <HapticTap off={picked} />
               </div>
             );
           })}
@@ -270,9 +272,10 @@ export function DraftsStep({
               </a>
             </>
           ) : (
-            <button type="button" onClick={onCopy} className="rv-cta btn btn-gold min-h-14 w-full text-[1.05rem]" aria-live="polite">
+            <button type="button" onClick={onCopy} className="rv-cta btn btn-gold relative min-h-14 w-full text-[1.05rem]" aria-live="polite">
               {copied ? <Check aria-hidden="true" className="rv-pop size-5" strokeWidth={2.5} /> : <GoogleMark />}
               <span>{copied ? t.write.copied : t.write.copyOpen}</span>
+              <HapticTap />
             </button>
           )}
           <p className="mt-2 text-center text-xs leading-snug text-(--rv-fg2)">{t.write.paste(rating)}</p>
@@ -479,9 +482,10 @@ export function ThanksStep({ t, rtl, kind, name, onAgain }: { t: Copy; rtl: bool
         <span aria-hidden="true" className="h-px w-6 bg-(--rv-line)" />
       </p>
       {kind === "google" && (
-        <button type="button" onClick={onAgain} className="rv-done-sign btn btn-ghost mt-8 min-h-12 px-5 text-sm">
+        <button type="button" onClick={onAgain} className="rv-done-sign btn btn-ghost relative mt-8 min-h-12 px-5 text-sm">
           <GoogleMark />
           {t.done.again}
+          <HapticTap />
         </button>
       )}
     </div>
