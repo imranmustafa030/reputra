@@ -1,9 +1,7 @@
 /* Reputra · static prototype */
 (() => {
   const root = document.documentElement;
-  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
-  root.classList.add("js");
-  if (!reduced) root.classList.add("motion");
+  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches; // the js and motion classes are set in the head, before the first paint
 
   /* ---------- smooth scroll, driven by GSAP's ticker so ScrollTrigger stays in step ---------- */
   let lenis = null;
@@ -61,12 +59,9 @@
     [...el.querySelectorAll(".w")].forEach((w) => w.setAttribute("aria-hidden", "true"));
     el.classList.add("words");
   }
-  const heads = !reduced ? [...document.querySelectorAll("#hero-title, main .h2, .display--close")] : [];
+  // the hero's headline arrives already split (index.html), and rises from its own inline script
+  const heads = !reduced ? [...document.querySelectorAll("main .h2, .display--close")].filter((h) => !h.classList.contains("words")) : [];
   heads.forEach(splitWords);
-  const heroTitle = document.getElementById("hero-title");
-  if (heroTitle && heroTitle.classList.contains("words")) {
-    (document.fonts ? document.fonts.ready : Promise.resolve()).then(() => requestAnimationFrame(() => heroTitle.classList.add("is-in")));
-  }
   if (new URLSearchParams(location.search).has("dummy")) root.classList.add("show-dummy");
 
   /* ---------- WhatsApp links (⚑ D01: the number) ---------- */
@@ -120,8 +115,11 @@
   };
   if (themeBtn) {
     label();
+    // the theme the last tap asked for: the page itself only changes inside the ripple, a frame later,
+    // so a quick second tap must not read the page or it would ask for the same theme twice
+    let wanted = root.dataset.theme === "light" ? "light" : "dark";
     themeBtn.addEventListener("click", () => {
-      const next = root.dataset.theme === "light" ? "dark" : "light";
+      const next = (wanted = wanted === "light" ? "dark" : "light");
       const apply = () => {
         if (next === "light") root.dataset.theme = "light"; else delete root.dataset.theme;
         try { localStorage.setItem("reputra-theme", next); } catch (e) { /* private mode: the choice lasts this visit */ }
@@ -136,7 +134,7 @@
           { clipPath: [`circle(0px at ${x}px ${y}px)`, `circle(${end.toFixed(0)}px at ${x}px ${y}px)`] },
           { duration: 800, easing: "cubic-bezier(0.16, 1, 0.3, 1)", pseudoElement: "::view-transition-new(root)" },
         );
-      });
+      }, () => {}); // a quick second tap skips the first ripple; the theme still lands where the last tap put it
     });
   }
   navTone();
@@ -221,6 +219,7 @@
       mx = e.clientX / innerWidth - 0.5; my = e.clientY / innerHeight - 0.5; queue();
     }, { passive: true });
     measure();
+    world.classList.add("is-live"); // placed: the pins may land now
 
     /* the month: reviews arrive as notifications; the rating is the real average of every review */
     const out = (k) => cafe.querySelector(`[data-${k}]`);
@@ -326,11 +325,13 @@
     gym: { logo: "IG", name: "Iron Gym", area: "Gulberg III, Lahore", url: "iron-gym" },
     shop: { logo: "HM", name: "Hafeez Mobiles", area: "Hafeez Centre, Lahore", url: "hafeez-mobiles" },
   };
+  let swap = 0; // quick taps through the kinds: only the last one swaps the card, so it never blinks between them
   document.querySelectorAll("[data-kind]").forEach((btn) => btn.addEventListener("click", () => {
     document.querySelectorAll("[data-kind]").forEach((b) => b.setAttribute("aria-pressed", String(b === btn)));
     const k = KINDS[btn.dataset.kind];
     review.classList.add("is-swapping");
-    setTimeout(() => {
+    clearTimeout(swap);
+    swap = setTimeout(() => {
       review.querySelector('[data-b="logo"]').textContent = k.logo;
       review.querySelector('[data-b="name"]').textContent = k.name;
       review.querySelector('[data-b="area"]').textContent = k.area;
@@ -352,8 +353,9 @@
       if (!reduced) { void s.offsetWidth; s.classList.add("is-pop"); }
       say(COPY[lang].thanks[i]);
     });
-    s.addEventListener("pointerenter", () => stars.forEach((t, j) => t.classList.toggle("is-lit", j <= i)));
-    s.addEventListener("pointerleave", () => stars.forEach((t, j) => t.classList.toggle("is-lit", j < rating)));
+    // only a mouse previews: a finger's enter and leave around a tap would flash the old rating
+    s.addEventListener("pointerenter", (e) => e.pointerType === "mouse" && stars.forEach((t, j) => t.classList.toggle("is-lit", j <= i)));
+    s.addEventListener("pointerleave", (e) => e.pointerType === "mouse" && stars.forEach((t, j) => t.classList.toggle("is-lit", j < rating)));
   });
   review.querySelector("[data-google]").addEventListener("click", () => say(COPY[lang].google));
   review.querySelector(".review__private").addEventListener("click", () => say(COPY[lang].privateDone));
