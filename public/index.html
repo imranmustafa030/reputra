@@ -38,7 +38,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@500&display=swap" media="print" onload="this.media='all'">
 <!-- the motion classes are set before the first paint, so the first frame drawn is the first frame of the
      entrance, never the finished page that the entrance would then hide and replay -->
-<script>try { if (localStorage.getItem("reputra-theme") === "light") document.documentElement.dataset.theme = "light"; } catch (e) {}
+<script>try { if (localStorage.getItem("reputra-theme") === "light") { document.documentElement.dataset.theme = "light"; document.querySelector('meta[name="theme-color"]').content = "#f6f6f8"; } } catch (e) {}
 document.documentElement.classList.add("js");
 if (!matchMedia("(prefers-reduced-motion: reduce)").matches) document.documentElement.classList.add("motion");
 if (window.WebGLRenderingContext) document.documentElement.classList.add("has-card"); /* the stage's 3D layout from the first paint; card3d.js hands back if WebGL fails */</script>
@@ -54,8 +54,11 @@ if (window.WebGLRenderingContext) document.documentElement.classList.add("has-ca
   let started;
   const start = () => (started ??= import("./card3d.js").then(() => window.ScrollTrigger && ScrollTrigger.refresh(), () => {}));
   window.__card3d = start;
-  for (const type of ["wheel", "touchmove", "keydown", "scroll"]) addEventListener(type, start, { once: true, passive: true });
-  const later = () => (window.requestIdleCallback || setTimeout)(start, { timeout: 1500 });
+  // A scroll or key during the fly-in waits for the landing too: compiling the stage then froze the first swipe on phones.
+  const later = () => {
+    for (const type of ["wheel", "touchmove", "keydown", "scroll"]) addEventListener(type, start, { once: true, passive: true });
+    (window.requestIdleCallback || setTimeout)(start, { timeout: 1500 });
+  };
   if (window.__landed) later(); else addEventListener("reputra:landed", later, { once: true });
   setTimeout(start, 8000); // whatever happens, the stage is ready long before anyone reaches it
 </script>

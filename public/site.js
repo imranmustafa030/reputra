@@ -122,6 +122,8 @@
       const next = (wanted = wanted === "light" ? "dark" : "light");
       const apply = () => {
         if (next === "light") root.dataset.theme = "light"; else delete root.dataset.theme;
+        // the phone's own top bar (Chrome on Android) follows; Safari reads the page ground itself
+        document.querySelector('meta[name="theme-color"]')?.setAttribute("content", next === "light" ? "#f6f6f8" : "#0b0c0e");
         try { localStorage.setItem("reputra-theme", next); } catch (e) { /* private mode: the choice lasts this visit */ }
         label();
         navTone();

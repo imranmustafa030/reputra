@@ -81,11 +81,20 @@ html[data-theme="light"] {
   --fg: var(--on-dark); --fg-2: var(--on-dark-2); --fg-3: var(--on-dark-3); --hair: var(--rule-dark); --accent-text: var(--amber);
 }
 *, *::before, *::after { box-sizing: border-box; }
-html { -webkit-text-size-adjust: 100%; }
+/* The page ground follows the theme: phone browsers tint their top and bottom bars from it (Safari
+   from the page, Chrome from theme-color, which site.js keeps in step), so the bars change with the
+   switch instead of keeping the old colour. No grey or blue box on tap either: buttons and links
+   answer with their own press. */
+html { -webkit-text-size-adjust: 100%; -webkit-tap-highlight-color: transparent; background: var(--surface); color-scheme: dark; }
+html[data-theme="light"] { color-scheme: light; }
+:where(a, button, [role="button"], summary, label) { -webkit-tap-highlight-color: transparent; }
+@media (hover: none) {
+  :where(a, button, [role="button"], summary) { transition: opacity 200ms ease; }
+  :where(a, button, [role="button"], summary):active { opacity: 0.6; transition-duration: 0s; }
+}
 main { overflow-x: clip; } /* nothing that animates past the edge may widen the page on a phone (clip, not hidden: the pinned stage keeps working) */
 body {
-  margin: 0;
-  background: var(--paper-100);
+  margin: 0; /* no ground of its own: the html's paints the canvas, under the fixed map (a body ground would cover it) */
   color: var(--ink-950);
   font-family: var(--sans);
   font-size: clamp(1rem, 0.96rem + 0.2vw, 1.0625rem);
@@ -177,6 +186,12 @@ h1, h2, h3 { margin: 0; font-weight: inherit; }
   -webkit-backdrop-filter: blur(18px) saturate(1.4); backdrop-filter: blur(18px) saturate(1.4);
   box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--fg) 9%, transparent), inset 0 1px 0 color-mix(in oklch, var(--fg) 7%, transparent), 0 24px 48px -28px oklch(0% 0 0 / 0.8);
   transition: width 0.6s var(--ease), background-color 0.35s, color 0.35s, box-shadow 0.35s;
+}
+/* Phones: a firmer fill instead of the frosted blur. The bar is fixed, so its blur is redone on every
+   frame of every scroll and of the map's fly-in, which mid-range Android phones felt as a slow page. */
+@media (hover: none) {
+  .nav { -webkit-backdrop-filter: none; backdrop-filter: none; background: oklch(17% 0.004 265 / 0.9); }
+  .nav.on-light { background: oklch(99.4% 0.001 265 / 0.94); }
 }
 .nav.is-scrolled { width: min(1020px, calc(100% - 2 * var(--gutter))); }
 .nav.on-light {
@@ -403,8 +418,7 @@ html[data-theme="light"] .theme__moon { opacity: 0; transform: rotate(90deg) sca
 .callout-pin__card {
   position: absolute; left: 22px; top: -22px; margin: 0; display: grid; gap: 2px; white-space: nowrap;
   padding: 10px 16px 11px; border-radius: 14px;
-  background: var(--chip-bg); color: var(--fg); font-size: 0.84rem;
-  -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+  background: var(--chip-bg); color: var(--fg); font-size: 0.84rem; /* 90% opaque: a backdrop blur showed nothing and re-blurred the moving map every frame */
   box-shadow: inset 0 0 0 1px var(--hair), 0 18px 40px -20px oklch(0% 0 0 / 0.7);
 }
 .callout-pin__card b { font-size: 0.95rem; font-weight: 600; letter-spacing: -0.01em; }
@@ -416,7 +430,6 @@ html[data-theme="light"] .theme__moon { opacity: 0; transform: rotate(90deg) sca
   position: absolute; left: 0; bottom: 0; display: flex; align-items: center; gap: 10px; white-space: nowrap;
   padding: 8px 14px 8px 8px; border-radius: 999px; font-size: 0.8rem; color: var(--fg-2);
   background: var(--chip-bg); box-shadow: inset 0 0 0 1px var(--hair);
-  -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
   animation: toast 3.2s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 .toast i.toast__avatar { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--amber); color: var(--ink-950); font-style: normal; font-size: 0.64rem; font-weight: 700; }

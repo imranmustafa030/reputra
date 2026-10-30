@@ -47,16 +47,26 @@
 
   --font-sans: var(--font-geist), "Inter", system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
-  --font-urdu: var(--font-nastaliq), "Noto Nastaliq Urdu", serif;
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-in-out-quart: cubic-bezier(0.76, 0, 0.24, 1);
+}
+
+/* Urdu in Nastaliq. A plain rule, not a theme font: --font-nastaliq is set on the review page's
+   <main> (next/font), and a theme variable at :root that points at it resolves to nothing there,
+   which dropped every Urdu screen to the phone's own Arabic font (on iPhone a taller Nastaliq the
+   spacing wasn't made for, so lines got cut). */
+.font-urdu {
+  /* Geist first: it has no Urdu letters, so those fall to Nastaliq while names and numbers stay Geist */
+  font-family: var(--font-geist), var(--font-nastaliq), "Noto Nastaliq Urdu", serif;
 }
 
 @layer base {
   html {
     -webkit-text-size-adjust: 100%;
     accent-color: var(--color-ink);
+    /* no grey or blue box on tap: controls answer with their own press */
+    -webkit-tap-highlight-color: transparent;
   }
   body {
     font-feature-settings: "ss01", "cv11";
@@ -711,6 +721,10 @@
     height: 58px;
   }
 }
+/* a finger can slide along the stars without the page panning or zooming */
+.rv-stars {
+  touch-action: none;
+}
 .rv-star {
   position: relative;
   display: grid;
@@ -943,7 +957,7 @@ body:has(.rv-page[data-theme="light"]) {
   --rv-glass-line: oklch(35% 0.04 70 / 0.12);
   --rv-glass-shadow: 0 1px 2px oklch(35% 0.05 70 / 0.06), 0 14px 32px -14px oklch(40% 0.09 65 / 0.3);
   --rv-lift-shadow: 0 2px 6px oklch(35% 0.06 70 / 0.08), 0 24px 44px -18px oklch(42% 0.11 65 / 0.45);
-  --rv-chip: oklch(100% 0 0 / 0.5);
+  --rv-chip: oklch(100% 0 0 / 0.66);
   --rv-field-bg: oklch(100% 0 0 / 0.88);
   --rv-field-line: oklch(35% 0.04 70 / 0.26);
   --rv-sheen: oklch(100% 0 0 / 0.14);
@@ -959,7 +973,7 @@ body:has(.rv-page[data-theme="light"]) {
   --rv-glass-line: oklch(100% 0 0 / 0.1);
   --rv-glass-shadow: 0 1px 2px oklch(0% 0 0 / 0.3), 0 18px 40px -16px oklch(0% 0 0 / 0.7);
   --rv-lift-shadow: 0 2px 6px oklch(0% 0 0 / 0.35), 0 26px 48px -18px oklch(0% 0 0 / 0.8);
-  --rv-chip: oklch(100% 0 0 / 0.06);
+  --rv-chip: oklch(100% 0 0 / 0.085);
   --rv-field-bg: oklch(100% 0 0 / 0.07);
   --rv-field-line: oklch(100% 0 0 / 0.26);
   --rv-sheen: oklch(100% 0 0 / 0.025);
@@ -988,6 +1002,10 @@ body:has(.rv-page[data-theme="light"]) {
   right: -48vmax;
   background: radial-gradient(closest-side, var(--rv-pool-a), transparent);
 }
+.rv-ambient.is-still::before,
+.rv-ambient.is-still::after {
+  animation-play-state: paused;
+}
 .rv-ambient::after {
   bottom: -66vmax;
   left: -52vmax;
@@ -1000,19 +1018,13 @@ body:has(.rv-page[data-theme="light"]) {
   box-shadow:
     inset 0 1px 0 var(--rv-glass-edge),
     var(--rv-glass-shadow);
-  -webkit-backdrop-filter: blur(18px) saturate(1.5);
-  backdrop-filter: blur(18px) saturate(1.5);
-}
-@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  .rv-glass {
-    background-color: var(--rv-glass-solid);
-  }
+  /* No backdrop blur: all that sits behind a pane is the soft light, already a blur, so blurring
+     it again changed no pixel (measured) while costing every frame a pane moved or the light
+     drifted. That was the slow picks and drafts on Android. */
 }
 @media (prefers-reduced-transparency: reduce) {
   .rv-glass {
     background-color: var(--rv-glass-solid);
-    -webkit-backdrop-filter: none;
-    backdrop-filter: none;
   }
 }
 /* what stood out: tap to pick */
@@ -1028,8 +1040,8 @@ body:has(.rv-page[data-theme="light"]) {
   font-size: 14.5px;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
-  -webkit-backdrop-filter: blur(10px);
-  backdrop-filter: blur(10px);
+  /* no backdrop blur: a dozen chips re-blurring the page behind them as they rise in made the
+     picks screen stutter on Android; a firmer fill reads the same */
   transition:
     background-color 200ms var(--ease-out-quint),
     border-color 200ms var(--ease-out-quint),
@@ -1037,7 +1049,7 @@ body:has(.rv-page[data-theme="light"]) {
     opacity 200ms ease,
     transform 140ms var(--ease-out-quint);
 }
-.rv-chip:active:not(:disabled) {
+.rv-chip:active:not([aria-disabled="true"]) {
   transform: scale(0.95);
 }
 .rv-chip[aria-pressed="true"] {
@@ -1050,9 +1062,9 @@ body:has(.rv-page[data-theme="light"]) {
   background: var(--rv-fg);
   color: var(--rv-bg);
 }
-.rv-chip:disabled {
+.rv-chip[aria-disabled="true"] {
   opacity: 0.4;
-  cursor: default;
+  cursor: not-allowed;
 }
 /* a field reads as a field on glass: a clear edge, a little inner depth, a placeholder example */
 .rv-field {
@@ -1168,6 +1180,19 @@ body:has(.rv-page[data-theme="light"]) {
   font-size: 17px;
   line-height: 2;
 }
+/* Nastaliq reaches far above and below its line. Wherever Urdu sits inside something that clips
+   (fields, the edited draft, the two-line preview) it gets room, or Safari cuts its tops and tails. */
+[dir="rtl"] .rv-field {
+  line-height: 2.1;
+  padding-block: 6px;
+}
+[dir="rtl"] textarea.rv-field {
+  padding-block: 10px;
+}
+[dir="rtl"] .rv-draft-edit,
+[dir="rtl"] .rv-clamp {
+  padding-block: 0.25em;
+}
 .rv-draft-edit {
   display: block;
   width: 100%;
@@ -1231,12 +1256,12 @@ body:has(.rv-page[data-theme="light"]) {
     animation: rv-shimmer 1.4s linear infinite;
   }
 }
-/* a pane arriving out of the glass: fades, rises and comes into focus */
+/* a pane arriving out of the glass: fades and rises. No blur filter: blurring a frosted pane
+   every frame is the costliest thing a phone can animate, and it made the drafts crawl on Android. */
 @keyframes rv-materialize {
   from {
     opacity: 0;
     transform: translateY(14px) scale(0.985);
-    filter: blur(6px);
   }
 }
 @keyframes rv-drift {
@@ -1396,7 +1421,8 @@ body:has(.rv-page[data-theme="light"]) {
   letter-spacing: 0;
 }
 /* Moving between steps: the old step recedes into the glass, the new one comes forward out of
-   it (the browser's view transitions). Back runs the same in reverse. */
+   it (the browser's view transitions; Safari gets the CSS entrance below). Back runs the same in
+   reverse. Opacity and transform only, so phones keep it on the GPU. */
 .rv-screen {
   view-transition-name: rv-screen;
 }
@@ -1420,28 +1446,24 @@ body:has(.rv-page[data-theme="light"]) {
   to {
     opacity: 0;
     transform: scale(0.94);
-    filter: blur(6px);
   }
 }
 @keyframes rv-forward {
   from {
     opacity: 0;
     transform: translateY(28px) scale(1.02);
-    filter: blur(8px);
   }
 }
 @keyframes rv-sink {
   to {
     opacity: 0;
     transform: translateY(28px) scale(1.02);
-    filter: blur(6px);
   }
 }
 @keyframes rv-rise-back {
   from {
     opacity: 0;
     transform: scale(0.94);
-    filter: blur(8px);
   }
 }
 @keyframes rv-halo {
@@ -2480,6 +2502,9 @@ html[data-rv-intro="title"] .rv-film-line + .rv-film-line > span {
   line-height: 0.95;
   letter-spacing: -0.045em;
   overflow-wrap: anywhere;
+}
+.rv-film-title[dir="rtl"] .rv-film-line {
+  padding-block: 0.3em 0.45em; /* the masks would cut Nastaliq's tall letters and long tails */
 }
 .rv-film-title[dir="rtl"] .rv-film-thanks,
 .rv-film-title[dir="rtl"] .rv-film-name {

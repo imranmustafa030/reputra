@@ -22,9 +22,10 @@ export function StepBar({ t, step, of, rating, rtl, onBack }: { t: Copy; step: n
         type="button"
         onClick={onBack}
         aria-label={t.write.back}
-        className="rv-glass grid size-11 shrink-0 place-items-center rounded-full text-(--rv-fg2) transition-colors hover:text-(--rv-fg)"
+        className="rv-glass relative grid size-11 shrink-0 place-items-center rounded-full text-(--rv-fg2) transition-colors hover:text-(--rv-fg)"
       >
         <ArrowLeft aria-hidden="true" className={`size-[18px] ${rtl ? "rotate-180" : ""}`} strokeWidth={1.9} />
+        <HapticTap />
       </button>
       <div className="flex flex-1 justify-center gap-1.5" role="img" aria-label={t.stepOf(step, of)}>
         {Array.from({ length: of }, (_, i) => (
@@ -113,8 +114,9 @@ export function PicksStep({
             {t.write.need}
           </p>
         )}
-        <button type="button" onClick={onWrite} className="rv-cta btn btn-gold min-h-14 w-full text-[1.05rem]">
+        <button type="button" onClick={onWrite} className="rv-cta btn btn-gold relative min-h-14 w-full text-[1.05rem]">
           {t.write.go}
+          <HapticTap />
         </button>
       </div>
     </div>
@@ -135,6 +137,7 @@ function ChipsLoading({ count, top = false }: { count: number; top?: boolean }) 
 
 function ChipGroup({ label, list, kind, picks, onToggle }: { label: string; list: string[]; kind: "g" | "b"; picks: string[]; onToggle: (key: string) => void }) {
   const full = picks.length >= MAX_PICKS;
+  const reduced = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
   return (
     <div role="group" aria-label={label} className={`flex flex-wrap gap-2 ${kind === "g" ? "mt-4" : ""}`}>
       {list.map((chip, i) => {
@@ -145,8 +148,14 @@ function ChipGroup({ label, list, kind, picks, onToggle }: { label: string; list
             key={key}
             type="button"
             aria-pressed={on}
-            disabled={full && !on}
-            onClick={() => onToggle(key)}
+            // Greyed but still tappable once three are picked: the tap is refused with a shake
+            // and its own buzz, so the limit is felt rather than met with a dead button.
+            aria-disabled={full && !on}
+            onClick={(e) => {
+              if (full && !on && !reduced())
+                e.currentTarget.animate({ transform: ["translateX(0)", "translateX(-5px)", "translateX(5px)", "translateX(-3px)", "translateX(0)"] }, { duration: 320, easing: "ease-out" });
+              onToggle(key);
+            }}
             className={`rv-chip relative ${kind === "b" ? "is-issue" : ""}`}
             style={{ "--i": i } as React.CSSProperties}
           >
@@ -212,8 +221,9 @@ export function DraftsStep({
           <p role="alert" className="text-(--rv-fg2)">
             {t.write.failed}
           </p>
-          <button type="button" onClick={onAgain} className="btn btn-ghost mx-auto mt-4 min-h-12 px-6">
+          <button type="button" onClick={onAgain} className="btn btn-ghost relative mx-auto mt-4 min-h-12 px-6">
             {t.write.retry}
+            <HapticTap />
           </button>
         </div>
       )}
@@ -251,9 +261,10 @@ export function DraftsStep({
             );
           })}
           {drafts.ai && (
-            <button type="button" onClick={onAgain} className="mx-auto -my-1 flex min-h-11 items-center gap-1.5 px-3 text-sm text-(--rv-fg2) hover:text-(--rv-fg)">
+            <button type="button" onClick={onAgain} className="relative mx-auto -my-1 flex min-h-11 items-center gap-1.5 px-3 text-sm text-(--rv-fg2) hover:text-(--rv-fg)">
               <RotateCw aria-hidden="true" className="size-4" strokeWidth={1.9} />
               {t.write.again}
+              <HapticTap />
             </button>
           )}
         </div>
@@ -266,9 +277,10 @@ export function DraftsStep({
               <p role="alert" className="mb-3 text-center text-sm text-(--rv-error)">
                 {t.write.copyFailed}
               </p>
-              <a href={googleHref} onClick={onLeave} className="rv-cta btn btn-gold min-h-14 w-full text-[1.05rem]">
+              <a href={googleHref} onClick={onLeave} className="rv-cta btn btn-gold relative min-h-14 w-full text-[1.05rem]">
                 <GoogleMark />
                 {t.write.openOnly}
+                <HapticTap />
               </a>
             </>
           ) : (
@@ -421,9 +433,10 @@ export function NoteStep({
       )}
 
       {/* Name and phone only for someone who wants a reply, so the note itself stays the one thing to do. */}
-      <button type="button" onClick={() => setReply((r) => !r)} aria-expanded={reply} className="rv-reply">
+      <button type="button" onClick={() => setReply((r) => !r)} aria-expanded={reply} className="rv-reply relative">
         <span>{t.note.reply}</span>
         <ChevronDown aria-hidden="true" className={`size-4 shrink-0 transition-transform duration-300 ${reply ? "rotate-180" : ""}`} strokeWidth={2} />
+        <HapticTap />
       </button>
       {reply && (
         <div className="rv-reply-fields grid gap-2.5">
@@ -443,14 +456,16 @@ export function NoteStep({
       )}
 
       <div className="mt-auto pt-5">
-        <SubmitButton pending={t.form.sending} className="rv-cta btn btn-gold min-h-14 w-full text-[1.05rem]">
+        <SubmitButton pending={t.form.sending} className="rv-cta btn btn-gold relative min-h-14 w-full text-[1.05rem]">
           {t.form.send}
+          <HapticTap />
         </SubmitButton>
         {showGoogle && (
           <p className="mt-2 text-center text-sm text-(--rv-fg3)">
             {t.note.orGoogle}{" "}
-            <button type="button" onClick={onGoogle} className="inline-flex min-h-11 items-center text-(--rv-fg2) underline underline-offset-4 hover:text-(--rv-fg)">
+            <button type="button" onClick={onGoogle} className="relative inline-flex min-h-11 items-center text-(--rv-fg2) underline underline-offset-4 hover:text-(--rv-fg)">
               {t.note.googleLink}
+              <HapticTap />
             </button>
           </p>
         )}
