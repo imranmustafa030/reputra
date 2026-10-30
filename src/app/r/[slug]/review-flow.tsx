@@ -5,7 +5,7 @@ import { flushSync } from "react-dom";
 import { ArrowRight, Moon, Sun } from "lucide-react";
 import { COPY, LANG_NAMES, LANGS, type Lang } from "./copy";
 import { copyText } from "@/lib/clipboard";
-import { haptic, HapticTap, starHaptic, tapHaptic } from "@/lib/haptics";
+import { haptic, HapticTap, humStar, starHaptic, stopHum, tapHaptic } from "@/lib/haptics";
 import { DraftsStep, MAX_PICKS, NoteStep, PicksStep, StepBar, ThanksStep, type Drafts } from "./steps";
 
 type Props = {
@@ -107,11 +107,11 @@ export function ReviewFlow({ business, source, preview = false }: Props) {
   const opening = useRef(false); // Google is on its way: a second tap must not open (and count) it twice
   const latest = useRef(0);
   const advance = useRef<ReturnType<typeof setTimeout>>(undefined);
-  // A finger on the stars: it can slide across them (each star felt, light to strong) and the
-  // rating is the star it lifts off. `felt` is the star a touch already buzzed for, so the tap's
-  // click doesn't buzz again; `slid` swallows the click some phones still send after a slide.
-  const drag = useRef<{ id: number; star: number; moved: boolean } | null>(null);
-  const felt = useRef(0);
+  // A finger on the stars hums while it is held, stronger the higher the star under it, and can
+  // slide across them; the rating is the star it lifts off. Drawn away from the stars it goes
+  // quiet (lifting there chooses nothing) and hums again when it comes back. `slid` swallows the
+  // click some phones still send after a slide.
+  const drag = useRef<{ id: number; star: number; moved: boolean; inside: boolean } | null>(null);
   const slid = useRef(false);
   const starsRow = useRef<HTMLDivElement>(null);
   const request = useRef<AbortController | null>(null);
@@ -203,6 +203,7 @@ export function ReviewFlow({ business, source, preview = false }: Props) {
       window.removeEventListener("pageshow", onShow);
       clearTimeout(advance.current);
       request.current?.abort();
+      stopHum();
     };
   }, [show, restored]);
 
@@ -211,8 +212,7 @@ export function ReviewFlow({ business, source, preview = false }: Props) {
     setRating(n);
     setBurst((b) => b + 1);
     if (n === 5) haptic("success");
-    else if (felt.current !== n) starHaptic(n);
-    felt.current = 0;
+    else starHaptic(n);
     clearTimeout(advance.current);
     if (!go) return;
     if (n >= 4 && business.hasGoogleLink) loadWords(n);
@@ -249,41 +249,55 @@ export function ReviewFlow({ business, source, preview = false }: Props) {
     return best;
   }
 
+  // Near the stars: the row, with some slack around it for a thumb that drifts while sliding.
+  function nearStars(x: number, y: number) {
+    const r = starsRow.current?.getBoundingClientRect();
+    return !!r && x > r.left - 24 && x < r.right + 24 && y > r.top - 56 && y < r.bottom + 56;
+  }
+
   function onStarDown(e: React.PointerEvent) {
     if (e.pointerType === "mouse" || drag.current) return;
     const n = starAt(e.clientX);
-    drag.current = { id: e.pointerId, star: n, moved: false };
-    felt.current = n;
+    drag.current = { id: e.pointerId, star: n, moved: false, inside: true };
     setHover(n);
-    starHaptic(n);
+    humStar(n);
   }
 
   function onStarMove(e: React.PointerEvent) {
     const d = drag.current;
     if (!d || d.id !== e.pointerId) return;
+    if (!nearStars(e.clientX, e.clientY)) {
+      if (!d.inside) return;
+      d.inside = false;
+      d.moved = true;
+      setHover(0);
+      stopHum();
+      return;
+    }
     const n = starAt(e.clientX);
-    if (n === d.star) return;
+    if (d.inside && n === d.star) return;
+    if (n !== d.star) d.moved = true;
+    d.inside = true;
     d.star = n;
-    d.moved = true;
-    felt.current = n;
     setHover(n);
-    starHaptic(n);
+    humStar(n);
   }
 
   function onStarUp(e: React.PointerEvent) {
     const d = drag.current;
     if (!d || d.id !== e.pointerId) return;
     drag.current = null;
+    stopHum();
     setHover(0);
     if (!d.moved) return; // a plain tap: its click chooses
     slid.current = true;
     setTimeout(() => (slid.current = false), 400);
-    choose(d.star, true);
+    if (d.inside) choose(d.star, true); // lifted away from the stars: nothing chosen
   }
 
   function onStarCancel() {
     drag.current = null;
-    felt.current = 0;
+    stopHum();
     setHover(0);
   }
 
