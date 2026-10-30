@@ -1,13 +1,12 @@
-import { Noto_Nastaliq_Urdu } from "next/font/google";
 import { FilmStage } from "./intro";
 
-// Urdu is set in Nastaliq. It only downloads when a customer switches to Urdu.
-const nastaliq = Noto_Nastaliq_Urdu({ subsets: ["arabic"], weight: ["400", "600"], variable: "--font-nastaliq", preload: false, display: "swap" });
+// Urdu is set in Nastaliq, from this site's own font files (see .font-urdu in globals.css); they
+// only download when a customer is reading Urdu.
 
 // The frame every review page shares, whether it was opened by code (/t/K7X9Q2) or by name (/r/…).
 export function ReviewShell({ children }: { children: React.ReactNode }) {
   return (
-    <main data-theme="light" className={`rv-page relative flex min-h-dvh flex-col overflow-clip bg-(--rv-bg) px-5 pt-6 pb-3 text-(--rv-fg) ${nastaliq.variable}`}>
+    <main data-theme="light" className={`rv-page relative flex min-h-dvh flex-col overflow-clip bg-(--rv-bg) px-5 pt-6 pb-3 text-(--rv-fg)`}>
       {/* in the static shell, so the opening film starts downloading with the first bytes */}
       <FilmStage />
       <div className="relative mx-auto flex w-full max-w-[440px] flex-1 flex-col lg:max-w-[1320px] lg:px-[2vw]">

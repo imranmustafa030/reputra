@@ -64,8 +64,8 @@
   heads.forEach(splitWords);
   if (new URLSearchParams(location.search).has("dummy")) root.classList.add("show-dummy");
 
-  /* ---------- WhatsApp links (⚑ D01: the number) ---------- */
-  const WA = "923000000000";
+  /* ---------- WhatsApp links (the same number as the app's, src/lib/contact.ts) ---------- */
+  const WA = "923024625600";
   const FIRST = "Assalam o Alaikum! I'd like to know more about Reputra for my business.";
   document.querySelectorAll("[data-wa]").forEach((a) => {
     a.href = `https://wa.me/${WA}?text=${encodeURIComponent(a.dataset.msg || FIRST)}`;

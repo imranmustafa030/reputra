@@ -34,6 +34,8 @@ export type Copy = {
     copyOpen: string;
     copied: string;
     copyFailed: string;
+    copyOne: string;
+    copiedOne: string;
     openOnly: string;
     paste: (stars: number) => string;
     back: string;
@@ -83,6 +85,8 @@ export const COPY: Record<Lang, Copy> = {
       copyOpen: "Copy & open Google",
       copied: "Copied. Opening Google…",
       copyFailed: "Couldn’t copy it. Press and hold the text to copy it, then open Google.",
+      copyOne: "Copy",
+      copiedOne: "Copied",
       openOnly: "Open Google",
       paste: (n) => `In Google, tap ${n} ${n === 1 ? "star" : "stars"}, then hold the box and choose Paste.`,
       back: "Back",
@@ -128,6 +132,8 @@ export const COPY: Record<Lang, Copy> = {
       copyOpen: "Copy karein aur Google kholein",
       copied: "Copy ho gaya. Google khul raha hai…",
       copyFailed: "Copy nahin hua. Text ko daba kar rakhein aur copy karein, phir Google kholein.",
+      copyOne: "Copy karein",
+      copiedOne: "Copy ho gaya",
       openOnly: "Google kholein",
       paste: (n) => `Google mein ${n} star dabayein, phir box daba kar Paste karein.`,
       back: "Wapis",
@@ -173,6 +179,8 @@ export const COPY: Record<Lang, Copy> = {
       copyOpen: "کاپی کریں اور گوگل کھولیں",
       copied: "کاپی ہو گیا۔ گوگل کھل رہا ہے…",
       copyFailed: "کاپی نہیں ہوا۔ متن کو دبا کر رکھیں اور کاپی کریں، پھر گوگل کھولیں۔",
+      copyOne: "کاپی کریں",
+      copiedOne: "کاپی ہو گیا",
       openOnly: "گوگل کھولیں",
       paste: (n) => `گوگل میں ${n} ستارے دبائیں، پھر خانے کو دبا کر رکھیں اور Paste چنیں۔`,
       back: "واپس",
