@@ -5,7 +5,7 @@ import { flushSync } from "react-dom";
 import { ArrowRight, Moon, Sun } from "lucide-react";
 import { COPY, LANG_NAMES, LANGS, type Lang } from "./copy";
 import { copyText } from "@/lib/clipboard";
-import { haptic, HapticTap } from "@/lib/haptics";
+import { haptic, HapticTap, starHaptic, tapHaptic } from "@/lib/haptics";
 import { DraftsStep, MAX_PICKS, NoteStep, PicksStep, StepBar, ThanksStep, type Drafts } from "./steps";
 
 type Props = {
@@ -64,6 +64,10 @@ const SPARKS = Array.from({ length: 12 }, (_, i) => {
 // The time the tapped stars get to play (fill, ripple, burst) before the next step comes in.
 const ADVANCE_MS = 650;
 
+// Safari's view transitions draw the incoming step off to one side for a moment before it
+// settles, so WebKit (Safari, and every browser on iPhone) gets the plain CSS entrance instead.
+const webkit = () => /AppleWebKit/.test(navigator.userAgent) && !/Chrome|Chromium|Android|Edg/.test(navigator.userAgent);
+
 // The customer's whole visit to Reputra, as full-screen steps that fit a phone without scrolling.
 // Stars first (the only screen with the language and theme switches). From 4 stars: what stood
 // out → three drafts written from those picks → copy and open Google. From 1 to 3 stars: a private
@@ -103,6 +107,13 @@ export function ReviewFlow({ business, source, preview = false }: Props) {
   const opening = useRef(false); // Google is on its way: a second tap must not open (and count) it twice
   const latest = useRef(0);
   const advance = useRef<ReturnType<typeof setTimeout>>(undefined);
+  // A finger on the stars: it can slide across them (each star felt, light to strong) and the
+  // rating is the star it lifts off. `felt` is the star a touch already buzzed for, so the tap's
+  // click doesn't buzz again; `slid` swallows the click some phones still send after a slide.
+  const drag = useRef<{ id: number; star: number; moved: boolean } | null>(null);
+  const felt = useRef(0);
+  const slid = useRef(false);
+  const starsRow = useRef<HTMLDivElement>(null);
   const request = useRef<AbortController | null>(null);
   const t = COPY[lang];
   const rtl = lang === "ur";
@@ -163,13 +174,16 @@ export function ReviewFlow({ business, source, preview = false }: Props) {
     }
     window.scrollTo(0, 0);
     const motion = !matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (motion && document.startViewTransition) {
+    if (motion && document.startViewTransition && !webkit()) {
       document.documentElement.dataset.rvDir = dir;
       // a newer step (two quick back swipes) skips this one's animation; that is fine, not an error
       document.startViewTransition(() => flushSync(() => setScreen(next))).ready.catch(() => {});
     } else {
-      setEnter(motion ? dir : "");
-      setScreen(next);
+      // a beat later, so the button that asked has finished its tap (its iPhone tick needs it mounted)
+      setTimeout(() => {
+        setEnter(motion ? dir : "");
+        setScreen(next);
+      });
     }
   }, []);
 
@@ -196,7 +210,9 @@ export function ReviewFlow({ business, source, preview = false }: Props) {
     latest.current = n;
     setRating(n);
     setBurst((b) => b + 1);
-    haptic(n === 5 ? "success" : n === 4 ? "firm" : "tick");
+    if (n === 5) haptic("success");
+    else if (felt.current !== n) starHaptic(n);
+    felt.current = 0;
     clearTimeout(advance.current);
     if (!go) return;
     if (n >= 4 && business.hasGoogleLink) loadWords(n);
@@ -223,8 +239,60 @@ export function ReviewFlow({ business, source, preview = false }: Props) {
     }
   }
 
+  // The star under a finger at x (the nearest one, so the gaps and the ends still count).
+  function starAt(x: number) {
+    const boxes = [...(starsRow.current?.querySelectorAll(".rv-star") ?? [])].map((el) => el.getBoundingClientRect());
+    let best = 1;
+    boxes.forEach((b, i) => {
+      if (Math.abs(x - (b.left + b.width / 2)) < Math.abs(x - (boxes[best - 1].left + boxes[best - 1].width / 2))) best = i + 1;
+    });
+    return best;
+  }
+
+  function onStarDown(e: React.PointerEvent) {
+    if (e.pointerType === "mouse" || drag.current) return;
+    const n = starAt(e.clientX);
+    drag.current = { id: e.pointerId, star: n, moved: false };
+    felt.current = n;
+    setHover(n);
+    starHaptic(n);
+  }
+
+  function onStarMove(e: React.PointerEvent) {
+    const d = drag.current;
+    if (!d || d.id !== e.pointerId) return;
+    const n = starAt(e.clientX);
+    if (n === d.star) return;
+    d.star = n;
+    d.moved = true;
+    felt.current = n;
+    setHover(n);
+    starHaptic(n);
+  }
+
+  function onStarUp(e: React.PointerEvent) {
+    const d = drag.current;
+    if (!d || d.id !== e.pointerId) return;
+    drag.current = null;
+    setHover(0);
+    if (!d.moved) return; // a plain tap: its click chooses
+    slid.current = true;
+    setTimeout(() => (slid.current = false), 400);
+    choose(d.star, true);
+  }
+
+  function onStarCancel() {
+    drag.current = null;
+    felt.current = 0;
+    setHover(0);
+  }
+
   function toggle(key: string) {
     setNeedPick(false);
+    if (!picks.includes(key) && picks.length >= MAX_PICKS) {
+      haptic("deny");
+      return;
+    }
     haptic("select");
     setPicks((now) => (now.includes(key) ? now.filter((k) => k !== key) : now.length < MAX_PICKS ? [...now, key] : now));
   }
@@ -341,10 +409,12 @@ export function ReviewFlow({ business, source, preview = false }: Props) {
       className={`relative isolate flex flex-1 flex-col ${business.intro ? "rv-with-intro" : ""} ${rtl ? "font-urdu" : ""}`}
       dir={rtl ? "rtl" : "ltr"}
       lang={lang === "ur" ? "ur" : lang === "roman" ? "ur-Latn" : "en"}
+      onClick={tapHaptic}
       style={{ "--rv-glow": screen === "thanks" ? 1 : rating / 5 } as React.CSSProperties}
     >
       {/* The warm light the glass floats over; it brightens with the stars. */}
-      <div className="rv-ambient" aria-hidden="true" />
+      {/* it drifts only behind the stars: under the steps' frosted panes every move of it re-blurs them all */}
+      <div className={`rv-ambient ${screen === "rate" ? "" : "is-still"}`} aria-hidden="true" />
 
       <div key={screen} className={`rv-screen flex flex-1 flex-col ${enter ? `rv-enter-${enter}` : ""} ${screen === "rate" ? "" : "rv-step"}`}>
         {screen === "rate" && (
@@ -357,22 +427,24 @@ export function ReviewFlow({ business, source, preview = false }: Props) {
                     type="button"
                     onClick={() => pickLang(l)}
                     aria-pressed={lang === l}
-                    className={`min-h-9 rounded-full px-3 text-[13px] transition-colors duration-200 ${l === "ur" ? "font-urdu" : ""} ${
+                    className={`relative min-h-9 rounded-full px-3 text-[13px] transition-colors duration-200 ${l === "ur" ? "font-urdu" : ""} ${
                       lang === l ? "bg-(--rv-fg) text-(--rv-bg)" : "text-(--rv-fg3) hover:text-(--rv-fg)"
                     }`}
                   >
                     {LANG_NAMES[l]}
+                    <HapticTap />
                   </button>
                 ))}
               </div>
               <button
                 type="button"
                 onClick={toggleTheme}
-                className="rv-glass grid size-11 place-items-center rounded-full text-(--rv-fg2) transition-colors hover:text-(--rv-fg)"
+                className="rv-glass relative grid size-11 place-items-center rounded-full text-(--rv-fg2) transition-colors hover:text-(--rv-fg)"
                 aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
                 aria-pressed={theme === "dark"}
               >
                 {theme === "dark" ? <Sun aria-hidden="true" className="size-4" strokeWidth={1.9} /> : <Moon aria-hidden="true" className="size-4" strokeWidth={1.9} />}
+                <HapticTap />
               </button>
             </div>
 
@@ -389,7 +461,19 @@ export function ReviewFlow({ business, source, preview = false }: Props) {
                 </h2>
 
                 <div className="relative mt-8" dir="ltr">
-                  <div role="radiogroup" aria-label={t.question} className="relative flex justify-between gap-1" onPointerLeave={() => setHover(0)} onKeyDown={onKey}>
+                  <div
+                    ref={starsRow}
+                    role="radiogroup"
+                    aria-label={t.question}
+                    data-haptic=""
+                    className="rv-stars relative flex justify-between gap-1"
+                    onPointerLeave={(e) => e.pointerType === "mouse" && setHover(0)}
+                    onPointerDown={onStarDown}
+                    onPointerMove={onStarMove}
+                    onPointerUp={onStarUp}
+                    onPointerCancel={onStarCancel}
+                    onKeyDown={onKey}
+                  >
                     {[1, 2, 3, 4, 5].map((n) => {
                       const on = n <= shown;
                       return (
@@ -400,7 +484,7 @@ export function ReviewFlow({ business, source, preview = false }: Props) {
                           aria-checked={rating === n}
                           aria-label={`${t.starName(n)}: ${t.labels[n - 1]}`}
                           tabIndex={rating ? (rating === n ? 0 : -1) : n === 1 ? 0 : -1}
-                          onClick={() => choose(n, true)}
+                          onClick={() => slid.current || choose(n, true)}
                           // Only a real mouse previews. A tap also fires mouse events that never
                           // "leave", which used to keep a second finger's stars lit over the rating.
                           onPointerEnter={(e) => e.pointerType === "mouse" && setHover(n)}
@@ -440,11 +524,12 @@ export function ReviewFlow({ business, source, preview = false }: Props) {
                 {business.hasGoogleLink && (
                   <a
                     href={googleHref}
-                    className="rv-in mx-auto mt-6 flex min-h-11 w-fit items-center gap-1.5 text-sm text-(--rv-fg3) underline-offset-4 hover:text-(--rv-fg) hover:underline"
+                    className="rv-in relative mx-auto mt-6 flex min-h-11 w-fit items-center gap-1.5 text-sm text-(--rv-fg3) underline-offset-4 hover:text-(--rv-fg) hover:underline"
                     style={{ "--d": "700ms" } as React.CSSProperties}
                   >
                     {t.skip}
                     <ArrowRight aria-hidden="true" className={`size-4 ${rtl ? "rotate-180" : ""}`} strokeWidth={1.75} />
+                    <HapticTap />
                   </a>
                 )}
               </section>
@@ -523,7 +608,6 @@ export function ReviewFlow({ business, source, preview = false }: Props) {
             name={business.name}
             onAgain={() => {
               const text = drafts?.texts[chosen]?.trim() || restored?.text;
-              haptic("tick");
               if (text) copyText(text);
               // eslint-disable-next-line @next/next/no-location-assign-relative-destination
               window.location.assign(googleHref);
